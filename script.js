@@ -269,7 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 progressBar.style.width = `${progress}%`;
             }
 
-            uploadProgressText.textContent = 'Wszystkie wspomnienia zostały pomyślnie przesłane!';
+            uploadProgressText.innerHTML = 'Wszystkie wspomnienia zostały pomyślnie przesłane!<br><br><strong>Twoje przesłane wspomnienia pojawią się na dole galerii wspomnień.</strong>';
             progressBar.style.display = 'none'; // Ukryj pasek postępu
 
             // Pokaż przycisk potwierdzenia zamiast automatycznego zamykania
@@ -277,7 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
             confirmButton.classList.add('confirm-upload-button'); // Dodaj klasę dla stylizacji
             confirmButton.innerHTML = '<i class="fas fa-check"></i> Gotowe!'; // Dodaj ikonę i tekst
 
-            uploadProgressText.appendChild(document.createElement('br')); // Nowa linia
             uploadProgressText.appendChild(confirmButton); // Dodaj przycisk pod tekstem statusu
 
             confirmButton.addEventListener('click', async () => {
