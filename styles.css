@@ -176,7 +176,6 @@ body {
     animation: spin 1s linear infinite;
     margin: 20px auto;
     display: none; /* Domyślnie ukryty, kontrolowany przez JS */
-    clear: both;
 }
 
 @keyframes spin {

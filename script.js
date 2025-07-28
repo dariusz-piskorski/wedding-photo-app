@@ -56,68 +56,41 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const data = await response.json();
             console.log('FRONTEND LOG: Data received from get-dropbox-images:', data);
-            let fetchedImages = data.images; // Obrazy z Dropbox (od najstarszych do najnowszych wg nazwy/timestampu)
+            const images = data.images;
 
-            if (fetchedImages.length === 0 && !append) {
+            if (images.length === 0 && !append) {
                 galleryGrid.innerHTML = '<p class="no-images-message">Brak zdjęć w galerii. Bądź pierwszym, który coś doda!</p>';
-            } else if (fetchedImages.length === 0 && append) {
+            } else if (images.length === 0 && append) {
                 // Brak nowych obrazów do dodania
             }
 
-            // Odwróć kolejność pobranych obrazów, aby najnowsze były na początku tej partii
-            fetchedImages.reverse();
+            allGalleryImages = allGalleryImages.concat(images); // Dodaj nowe obrazy do globalnej listy
 
-            // Zaktualizuj globalną listę wszystkich obrazów
-            if (!append) {
-                allGalleryImages = fetchedImages; // Pierwsze ładowanie: ustaw na odwróconą partię
-            } else {
-                // Kolejne ładowanie: dodaj nową (odwróconą) partię na początek istniejących obrazów
-                allGalleryImages = fetchedImages.concat(allGalleryImages);
-            }
-
-            // Dodaj obrazy do DOM
-            fetchedImages.forEach((image) => {
+            images.forEach((image, index) => {
                 const imgContainer = document.createElement('div');
                 imgContainer.classList.add('gallery-item');
 
                 const img = document.createElement('img');
-                img.src = image.url;
+                                img.src = image.url; // Użyj bezpośredniego URL do obrazu
                 img.alt = image.name;
-                img.loading = 'lazy';
+                img.loading = 'lazy'; // Lazy loading
 
+                // Obsługa kliknięcia na miniaturkę
                 img.addEventListener('click', () => {
-                    currentImageIndex = allGalleryImages.indexOf(image);
+                    currentImageIndex = allGalleryImages.indexOf(image); // Ustaw indeks klikniętego obrazu
                     showImageInLightbox(currentImageIndex);
                 });
 
-                // Dla pierwszego ładowania, dodaj na koniec, aby zachować kolejność po odwróceniu.
-                // Dla kolejnych ładowań, dodaj na początek, aby najnowsze były na górze.
-                if (!append) {
-                    galleryGrid.appendChild(imgContainer);
-                } else {
-                    galleryGrid.prepend(imgContainer);
-                }
+                imgContainer.appendChild(img);
+                galleryGrid.appendChild(imgContainer);
             });
 
-            currentCursor = data.cursor;
-            hasMoreImages = data.has_more;
+            
+
+            currentCursor = data.cursor; // Użyj kursora z odpowiedzi Dropboxa
+            hasMoreImages = data.has_more; // Użyj has_more z odpowiedzi Dropboxa
 
         } catch (error) {
-            console.error('Błąd ładowania galerii:', error);
-            if (!append) {
-                galleryGrid.innerHTML = '<p class="error-message">Nie udało się załadować galerii. Spróbuj odświeżyć stronę.</p>';
-            }
-        } finally {
-            isLoadingImages = false;
-            if (hasMoreImages) {
-                loadingIndicator.style.display = 'block';
-            } else {
-                loadingIndicator.style.display = 'none';
-            }
-        }
-    }
-
-            
             console.error('Błąd ładowania galerii:', error);
             if (!append) {
                 galleryGrid.innerHTML = '<p class="error-message">Nie udało się załadować galerii. Spróbuj odświeżyć stronę.</p>';
