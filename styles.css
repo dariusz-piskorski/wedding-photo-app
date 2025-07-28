@@ -360,6 +360,28 @@ body {
     transition: width 0.4s ease-out;
 }
 
+.confirm-upload-button {
+    background-color: var(--primary-green);
+    color: var(--white);
+    padding: 10px 20px;
+    border: none;
+    border-radius: 50px;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    margin-top: 20px;
+}
+
+.confirm-upload-button:hover {
+    background-color: #3A6C49;
+    transform: translateY(-2px);
+}
+
+.confirm-upload-button:active {
+    transform: translateY(0);
+}
+
 
 /* Responsive adjustments */
 @media (min-width: 600px) {

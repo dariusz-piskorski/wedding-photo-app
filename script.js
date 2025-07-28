@@ -271,15 +271,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
             uploadProgressText.textContent = 'Wszystkie wspomnienia zostały pomyślnie przesłane!';
             
-            setTimeout(async () => {
+            // Pokaż przycisk potwierdzenia zamiast automatycznego zamykania
+            const confirmButton = document.createElement('button');
+            confirmButton.textContent = 'Gotowe!';
+            confirmButton.classList.add('confirm-upload-button'); // Dodaj klasę dla stylizacji
+            uploadProgressText.appendChild(confirmButton); // Dodaj przycisk pod tekstem statusu
+
+            confirmButton.addEventListener('click', async () => {
                 uploadOverlay.classList.remove('active');
-                currentCursor = null;
+                progressBar.style.width = '0%';
+                progressBar.style.backgroundColor = 'var(--primary-green)'; // Reset koloru paska
+                confirmButton.remove(); // Usuń przycisk po kliknięciu
+                currentCursor = null; // Zresetuj kursor, aby odświeżyć galerię
                 hasMoreImages = true;
-                await loadGalleryImages();
-                setTimeout(() => {
-                    progressBar.style.width = '0%';
-                }, 500);
-            }, 2000);
+                await loadGalleryImages(); // Odśwież galerię po zamknięciu okna
+            });
 
         } catch (error) {
             uploadProgressText.textContent = `Błąd: ${error.message}`;
