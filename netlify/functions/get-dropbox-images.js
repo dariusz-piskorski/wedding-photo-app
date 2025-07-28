@@ -109,8 +109,8 @@ exports.handler = async function(event, context) {
             }
 
             // Get temporary link for thumbnail
-            const getThumbnailUrl = 'https://api.dropboxapi.com/2/files/get_thumbnail';
-            const getThumbnailPayload = {
+            const getThumbnailUrl = 'https://content.dropboxapi.com/2/files/get_thumbnail_v2';
+            const getThumbnailArg = {
                 path: file.path_lower,
                 format: 'jpeg',
                 size: 'w640h480',
@@ -121,9 +121,10 @@ exports.handler = async function(event, context) {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/octet-stream',
+                    'Dropbox-API-Arg': JSON.stringify(getThumbnailArg),
                 },
-                body: JSON.stringify(getThumbnailPayload),
+                body: '',
             });
 
             let thumbnailUrl = null;
