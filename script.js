@@ -270,17 +270,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             uploadProgressText.textContent = 'Wszystkie wspomnienia zostały pomyślnie przesłane!';
-            
+            progressBar.style.display = 'none'; // Ukryj pasek postępu
+
             // Pokaż przycisk potwierdzenia zamiast automatycznego zamykania
             const confirmButton = document.createElement('button');
-            confirmButton.textContent = 'Gotowe!';
             confirmButton.classList.add('confirm-upload-button'); // Dodaj klasę dla stylizacji
+            confirmButton.innerHTML = '<i class="fas fa-check"></i> Gotowe!'; // Dodaj ikonę i tekst
+
+            uploadProgressText.appendChild(document.createElement('br')); // Nowa linia
             uploadProgressText.appendChild(confirmButton); // Dodaj przycisk pod tekstem statusu
 
             confirmButton.addEventListener('click', async () => {
                 uploadOverlay.classList.remove('active');
                 progressBar.style.width = '0%';
                 progressBar.style.backgroundColor = 'var(--primary-green)'; // Reset koloru paska
+                progressBar.style.display = 'block'; // Przywróć widoczność paska dla kolejnych uploadów
                 confirmButton.remove(); // Usuń przycisk po kliknięciu
                 currentCursor = null; // Zresetuj kursor, aby odświeżyć galerię
                 hasMoreImages = true;
