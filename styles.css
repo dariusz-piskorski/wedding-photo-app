@@ -1,7 +1,7 @@
 /* General Styles */
 :root {
     --primary-green: #4A7C59; /* Jasna butelkowa zieleń */
-    --secondary-text: #444444; /* Szary tekst */
+    --secondary-text: #666666; /* Jaśniejszy szary tekst */
     --background-light: #F5F5F5;
     --white: #ffffff;
     --shadow-light: rgba(0, 0, 0, 0.1);
@@ -84,6 +84,13 @@ body {
     cursor: pointer;
     transition: background-color 0.3s ease, transform 0.2s ease;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    display: inline-flex; /* Użyj flexboxa dla wyrównania ikony i tekstu */
+    align-items: center;
+    justify-content: center;
+}
+
+.action-button i {
+    margin-right: 8px; /* Odstęp między ikoną a tekstem */
 }
 
 .action-button:hover {
@@ -116,7 +123,8 @@ body {
     text-align: center;
     color: var(--primary-green);
     margin-bottom: 20px;
-    font-size: 1.8em;
+    font-size: 2.5em; /* Jeszcze większa czcionka */
+    font-family: 'Dancing Script', cursive;
 }
 
 .gallery-grid {
@@ -125,26 +133,112 @@ body {
     gap: 15px;
 }
 
-.gallery-placeholder {
+.gallery-item {
     width: 100%;
     padding-bottom: 100%; /* Tworzy kwadratowe miejsce */
     background-color: #e0e0e0;
     border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #888;
-    font-size: 0.8em;
     overflow: hidden;
     position: relative;
+    box-shadow: 0 2px 5px var(--shadow-light);
+    cursor: pointer; /* Dodaj kursor wskazujący na klikalność */
 }
 
-.gallery-placeholder::before {
-    content: 'Zdjęcie';
+.gallery-item img {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Dopasowuje obraz do ramki, przycinając go */
+    border-radius: 8px;
+    transition: transform 0.3s ease;
+}
+
+.gallery-item img:hover {
+    transform: scale(1.05);
+}
+
+.gallery-placeholder {
+    display: none; /* Ukryj placeholdery, gdy galeria jest dynamicznie ładowana */
+}
+
+.no-images-message,
+.error-message {
+    text-align: center;
+    width: 100%;
+    margin-top: 20px;
+    color: var(--secondary-text);
+    font-style: italic;
+}
+
+/* Lightbox Styles */
+.lightbox {
+    display: none; /* Ukryty domyślnie */
+    position: fixed; /* Pozostaje na wierzchu */
+    z-index: 1000; /* Wysoko, aby był nad innymi elementami */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto; /* Włącz przewijanie, jeśli obraz jest większy niż ekran */
+    background-color: rgba(0, 0, 0, 0.9); /* Półprzezroczyste czarne tło */
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.lightbox.active {
+    display: flex; /* Aktywuj flexbox tylko gdy klasa 'active' jest obecna */
+}
+
+.lightbox-content {
+    margin: auto;
+    display: block;
+    max-width: 90%;
+    max-height: 80%;
+    object-fit: contain; /* Dopasuj obraz, zachowując proporcje */
+}
+
+.close-button {
+    position: absolute;
+    top: 15px;
+    right: 35px;
+    color: #f1f1f1;
+    font-size: 40px;
+    font-weight: bold;
+    transition: 0.3s;
+    cursor: pointer;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: #bbb;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.download-button {
+    /* Już dziedziczy większość stylów z .action-button */
+    margin-top: 20px; /* Zachowaj specyficzny margines */
+    text-decoration: none; /* Usuń podkreślenie linku */
+    background-color: var(--primary-green);
+    color: var(--white);
+    padding: 15px 30px;
+    border: none;
+    border-radius: 50px; /* Zaokrąglone rogi */
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.download-button i {
+    margin-right: 8px;
 }
 
 /* Responsive adjustments */
