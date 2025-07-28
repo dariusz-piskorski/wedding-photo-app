@@ -115,6 +115,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // Obserwuj wskaźnik ładowania
     observer.observe(loadingIndicator);
 
+    // Logika przycisku "Wróć na górę"
+    const backToTopBtn = document.getElementById('backToTopBtn');
+
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 300) { // Pokaż przycisk po przewinięciu 300px
+            backToTopBtn.classList.add('show');
+            backToTopBtn.style.display = 'flex'; // Użyj flex, aby wyśrodkować ikonę
+        } else {
+            backToTopBtn.classList.remove('show');
+            // backToTopBtn.style.display = 'none'; // Ukryj po animacji
+        }
+    });
+
+    backToTopBtn.addEventListener('click', () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth' // Płynne przewijanie
+        });
+    });
+
     // Zamknij lightbox po kliknięciu na przycisk zamknięcia
     closeButton.addEventListener('click', () => {
         lightbox.classList.remove('active');

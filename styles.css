@@ -359,3 +359,28 @@ footer p {
     font-family: 'Dancing Script', cursive; /* Użyj tej samej czcionki co nagłówki */
     font-weight: bold;
 }
+
+/* Back to Top Button Styles */
+.back-to-top-btn {
+    display: none; /* Ukryty domyślnie */
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 99; /* Nad innymi elementami, ale pod lightboxem/upload overlayem */
+    border-radius: 50%; /* Okrągły kształt */
+    width: 50px;
+    height: 50px;
+    padding: 0; /* Usuń padding z action-button */
+    font-size: 1.5em; /* Większa ikona */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* Wyraźniejszy cień */
+    transition: background-color 0.3s ease, transform 0.2s ease, opacity 0.3s ease; /* Dodaj animację opacity */
+    opacity: 0; /* Początkowa przezroczystość dla animacji pojawiania się */
+}
+
+.back-to-top-btn.show {
+    opacity: 1; /* Pokaż przycisk */
+}
+
+.back-to-top-btn i {
+    margin-right: 0; /* Usuń margines dla ikony */
+}
