@@ -7,7 +7,7 @@
 4.  [Struktura Projektu](#4-struktura-projektu)
 5.  [Konfiguracja i Wdrożenie](#5-konfiguracja-i-wdrożenie)
 6.  [Użycie Aplikacji](#6-użycie-aplikacji)
-7.  [Dziennik Rozwoju i Kluczowe Zmiany](#7-dziennik-rozwoju-i-kluczowe-zmiany)
+7.  [Dziennik Rozwoju i Kluczowe Zmiany](#7-dzienniku-rozwoju-i-kluczowe-zmiany)
 8.  [Przyszłe Ulepszenia](#8-przyszłe-ulepszenia)
 
 ---
