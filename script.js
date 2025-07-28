@@ -257,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         'Content-Type': 'application/octet-stream',
                         'Dropbox-API-Arg': JSON.stringify({
                             cursor: { session_id: sessionId, offset: file.size },
-                            commit: { path: `/Apps/WeddingWebsite/${newFilename}`, mode: 'add', autorename: true, mute: false }
+                            commit: { path: `/slubne-wspomnienia-gallery/${newFilename}`, mode: 'add', autorename: true, mute: false }
                         })
                     },
                     body: ''
