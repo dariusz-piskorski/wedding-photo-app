@@ -7,17 +7,42 @@ document.addEventListener('DOMContentLoaded', () => {
     const lightboxImage = document.getElementById('lightboxImage');
     const downloadButton = document.getElementById('downloadButton');
     const closeButton = document.querySelector('.close-button');
+    const loadingIndicator = document.getElementById('loadingIndicator');
 
     // Elementy okna postępu
     const uploadOverlay = document.getElementById('uploadOverlay');
     const uploadProgressText = document.getElementById('uploadProgressText');
     const progressBar = document.getElementById('progressBar');
 
+    // Zmienne stanu dla nieskończonego przewijania
+    let currentCursor = null;
+    let hasMoreImages = true;
+    let isLoadingImages = false;
+    const imagesPerLoad = 20; // Liczba obrazów ładowanych jednorazowo
+
     // Funkcja do ładowania obrazów do galerii
-    async function loadGalleryImages() {
-        galleryGrid.innerHTML = ''; // Wyczyść placeholdery
+    async function loadGalleryImages(append = false) {
+        if (isLoadingImages || !hasMoreImages) return; // Zapobiegaj wielokrotnemu ładowaniu
+
+        isLoadingImages = true;
+        loadingIndicator.style.display = 'block'; // Pokaż wskaźnik ładowania
+
+        if (!append) {
+            galleryGrid.innerHTML = ''; // Wyczyść galerię tylko przy pierwszym ładowaniu
+            currentCursor = null; // Zresetuj kursor
+            hasMoreImages = true; // Zresetuj flagę
+        }
+
         try {
-            const response = await fetch('/.netlify/functions/get-dropbox-images');
+            let url = '/.netlify/functions/get-dropbox-images';
+            const params = new URLSearchParams();
+            params.append('limit', imagesPerLoad);
+            if (currentCursor) {
+                params.append('cursor', currentCursor);
+            }
+            url += `?${params.toString()}`;
+
+            const response = await fetch(url);
             if (!response.ok) {
                 throw new Error(`Błąd funkcji Netlify (galeria): ${response.statusText}`);
             }
@@ -25,9 +50,10 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('FRONTEND LOG: Data received from get-dropbox-images:', data);
             const images = data.images;
 
-            if (images.length === 0) {
+            if (images.length === 0 && !append) {
                 galleryGrid.innerHTML = '<p class="no-images-message">Brak zdjęć w galerii. Bądź pierwszym, który coś doda!</p>';
-                return;
+            } else if (images.length === 0 && append) {
+                // Brak nowych obrazów do dodania
             }
 
             images.forEach(image => {
@@ -50,11 +76,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 imgContainer.appendChild(img);
                 galleryGrid.appendChild(imgContainer);
             });
+
+            currentCursor = data.cursor;
+            hasMoreImages = data.has_more;
+
         } catch (error) {
             console.error('Błąd ładowania galerii:', error);
-            galleryGrid.innerHTML = '<p class="error-message">Nie udało się załadować galerii. Spróbuj odświeżyć stronę.</p>';
+            if (!append) {
+                galleryGrid.innerHTML = '<p class="error-message">Nie udało się załadować galerii. Spróbuj odświeżyć stronę.</p>';
+            }
+        } finally {
+            isLoadingImages = false;
+            loadingIndicator.style.display = 'none'; // Ukryj wskaźnik ładowania
         }
     }
+
+    // Intersection Observer dla nieskończonego przewijania
+    const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMoreImages && !isLoadingImages) {
+            loadGalleryImages(true); // Załaduj więcej obrazów, jeśli wskaźnik jest widoczny
+        }
+    }, {
+        root: null, // viewport
+        rootMargin: '0px',
+        threshold: 0.1 // Wykryj, gdy 10% wskaźnika jest widoczne
+    });
+
+    // Obserwuj wskaźnik ładowania
+    observer.observe(loadingIndicator);
 
     // Zamknij lightbox po kliknięciu na przycisk zamknięcia
     closeButton.addEventListener('click', () => {

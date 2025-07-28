@@ -12,21 +12,41 @@ exports.handler = async function(event, context) {
     }
 
     try {
-        // Krok 1: Pobierz listę plików z folderu aplikacji Dropbox
-        const listFilesUrl = 'https://api.dropboxapi.com/2/files/list_folder';
-        const listFilesPayload = {
-            path: '', // Pusta ścieżka oznacza folder główny aplikacji
-            recursive: false,
-        };
+        const { cursor, limit } = event.queryStringParameters;
+        const defaultLimit = 20; // Domyślna liczba obrazów do pobrania na żądanie
+        const fetchLimit = parseInt(limit) || defaultLimit;
 
-        console.log('FUNCTION LOG: Sending list_folder request to Dropbox.');
-        const listFilesResponse = await fetch(listFilesUrl, {
+        let apiEndpoint;
+        let apiPayload;
+
+        if (cursor) {
+            apiEndpoint = 'https://api.dropboxapi.com/2/files/list_folder/continue';
+            apiPayload = {
+                cursor: cursor
+            };
+            console.log('FUNCTION LOG: Sending list_folder/continue request to Dropbox with cursor:', cursor);
+        } else {
+            apiEndpoint = 'https://api.dropboxapi.com/2/files/list_folder';
+            apiPayload = {
+                path: '', // Pusta ścieżka oznacza folder główny aplikacji
+                recursive: false,
+                limit: fetchLimit, // Zastosuj limit dla początkowego wywołania
+                include_media_info: false,
+                include_deleted: false,
+                include_has_explicit_shared_members: false,
+                include_mounted_folders: true,
+                include_non_downloadable_files: false
+            };
+            console.log('FUNCTION LOG: Sending list_folder request to Dropbox with limit:', fetchLimit);
+        }
+
+        const listFilesResponse = await fetch(apiEndpoint, {
             method: 'POST',
             headers: {
                 'Authorization': 'Bearer ' + process.env.DROPBOX_API_TOKEN,
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(listFilesPayload),
+            body: JSON.stringify(apiPayload),
         });
 
         const listFilesData = await listFilesResponse.json();
@@ -42,7 +62,6 @@ exports.handler = async function(event, context) {
         console.log('FUNCTION LOG: Found files:', files.length);
 
         const imagePromises = files.map(async (file) => {
-            // Krok 2: Dla każdego pliku wygeneruj tymczasowy link do pełnego rozmiaru
             const getTemporaryLinkUrl = 'https://api.dropboxapi.com/2/files/get_temporary_link';
             const getTemporaryLinkPayload = { path: file.path_lower };
 
@@ -61,21 +80,24 @@ exports.handler = async function(event, context) {
                 console.log(`FUNCTION LOG: Link generated for: ${file.name}`);
                 return {
                     name: file.name,
-                    url: linkData.link, // Zwracamy bezpośredni link
+                    url: linkData.link,
                 };
             } else {
                 console.error(`FUNCTION ERROR: Failed to get link for ${file.name}:`, await linkResponse.text());
-                return null; // Zwróć null w przypadku błędu
+                return null;
             }
         });
 
-        // Poczekaj na wszystkie promisy i odfiltruj te, które zwróciły null
         const images = (await Promise.all(imagePromises)).filter(img => img !== null);
 
         console.log('FUNCTION LOG: Returning images count:', images.length);
         return {
             statusCode: 200,
-            body: JSON.stringify({ images }),
+            body: JSON.stringify({
+                images: images,
+                cursor: listFilesData.cursor,
+                has_more: listFilesData.has_more
+            }),
         };
 
     } catch (error) {
