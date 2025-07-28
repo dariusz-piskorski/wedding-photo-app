@@ -8,6 +8,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadButton = document.getElementById('downloadButton');
     const closeButton = document.querySelector('.close-button');
 
+    // Elementy okna postępu
+    const uploadOverlay = document.getElementById('uploadOverlay');
+    const uploadProgressText = document.getElementById('uploadProgressText');
+    const progressBar = document.getElementById('progressBar');
+
     // Funkcja do ładowania obrazów do galerii
     async function loadGalleryImages() {
         galleryGrid.innerHTML = ''; // Wyczyść placeholdery
@@ -73,65 +78,74 @@ document.addEventListener('DOMContentLoaded', () => {
     fileInput.addEventListener('change', async () => {
         const files = fileInput.files;
         if (files.length === 0) {
-            statusDiv.textContent = 'Nie wybrano żadnych plików.';
             return;
         }
 
-        statusDiv.textContent = `Przygotowywanie do wysyłki ${files.length} plików...`;
+        // Pokaż okno postępu
+        uploadOverlay.classList.add('active');
+        statusDiv.textContent = ''; // Wyczyść stary status
 
-        for (let i = 0; i < files.length; i++) {
+        const totalFiles = files.length;
+        let filesUploaded = 0;
+
+        for (let i = 0; i < totalFiles; i++) {
             const file = files[i];
-            statusDiv.textContent = `Wysyłanie pliku ${i + 1} z ${files.length}: ${file.name}...`;
+            uploadProgressText.textContent = `Przesyłanie pliku ${i + 1} z ${totalFiles}: ${file.name}`;
 
             try {
-                // Krok 1: Wywołaj funkcję Netlify, aby uzyskać tymczasowy link do wysyłki na Dropbox
-                const netlifyFunctionUrl = '/.netlify/functions/get-dropbox-upload-link';
-                const response = await fetch(netlifyFunctionUrl, {
+                // Krok 1: Uzyskaj link do wysyłki
+                const response = await fetch('/.netlify/functions/get-dropbox-upload-link', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ filename: file.name }),
                 });
 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    throw new Error(`Błąd funkcji Netlify: ${errorData.message || response.statusText}`);
+                    throw new Error(`Błąd serwera: ${errorData.message || response.statusText}`);
                 }
 
                 const data = await response.json();
                 const uploadUrl = data.uploadUrl;
 
-                if (!uploadUrl) {
-                    throw new Error('Nie otrzymano linku do wysłania z funkcji Netlify.');
-                }
-
-                statusDiv.textContent = `Wysyłanie pliku ${i + 1} z ${files.length}: ${file.name} do Dropbox...`;
-
-                // Krok 2: Wyślij plik bezpośrednio do Dropbox
+                // Krok 2: Wyślij plik do Dropbox
                 const dropboxResponse = await fetch(uploadUrl, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/octet-stream',
-                    },
+                    headers: { 'Content-Type': 'application/octet-stream' },
                     body: file,
                 });
 
-                if (dropboxResponse.ok) {
-                    statusDiv.textContent = `Plik ${i + 1} z ${files.length}: ${file.name} został pomyślnie wysłany!`;
-                    // Po pomyślnym wysłaniu, odśwież galerię
-                    loadGalleryImages(); 
-                } else {
-                    const errorText = await dropboxResponse.text();
-                    throw new Error(`Błąd wysyłania do Dropbox: ${errorText}`);
+                if (!dropboxResponse.ok) {
+                    throw new Error(`Błąd wysyłania do Dropbox: ${await dropboxResponse.text()}`);
                 }
 
+                filesUploaded++;
+                const progress = (filesUploaded / totalFiles) * 100;
+                progressBar.style.width = `${progress}%`;
+
             } catch (error) {
-                statusDiv.textContent = `Wystąpił błąd podczas wysyłania ${file.name}: ${error.message}`;
-                console.error(error);
-                break; // Przerwij wysyłanie po pierwszym błędzie
+                uploadProgressText.textContent = `Błąd przy pliku ${file.name}: ${error.message}`;
+                progressBar.style.backgroundColor = '#d9534f'; // Czerwony kolor dla błędu
+                // Poczekaj chwilę, aby użytkownik zobaczył błąd, a następnie zamknij okno
+                setTimeout(() => {
+                    uploadOverlay.classList.remove('active');
+                    progressBar.style.backgroundColor = 'var(--primary-green)'; // Reset koloru
+                }, 4000);
+                return; // Przerwij proces
             }
         }
-        statusDiv.textContent = 'Wszystkie wybrane pliki zostały przetworzone.';
+
+        // Zakończenie sukcesem
+        uploadProgressText.textContent = 'Wszystkie pliki zostały pomyślnie przesłane!';
+        
+        // Poczekaj chwilę, aby użytkownik zobaczył komunikat o sukcesie
+        setTimeout(async () => {
+            uploadOverlay.classList.remove('active');
+            await loadGalleryImages(); // Odśwież galerię RAZ, po wszystkim
+            // Zresetuj stan paska postępu na następny raz
+            setTimeout(() => {
+                progressBar.style.width = '0%';
+            }, 500);
+        }, 2000);
     });
 });
