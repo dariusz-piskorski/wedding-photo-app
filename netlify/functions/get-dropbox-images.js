@@ -1,9 +1,8 @@
 exports.handler = async function(event, context) {
     const { Buffer } = require('buffer'); // Jawny import Buffer
-    const DROPBOX_TOKEN = process.env.DROPBOX_API_TOKEN; // Pobierz token z zmiennych środowiskowych Netlify
-    console.log('FUNCTION LOG: DROPBOX_API_TOKEN (masked):', DROPBOX_TOKEN ? DROPBOX_TOKEN.substring(0, 5) + '...' : 'Not set');
+    console.log('FUNCTION LOG: DROPBOX_API_TOKEN (masked):', process.env.DROPBOX_API_TOKEN ? process.env.DROPBOX_API_TOKEN.substring(0, 5) + '...' : 'Not set');
 
-    if (!DROPBOX_TOKEN) {
+    if (!process.env.DROPBOX_API_TOKEN) {
         console.error('FUNCTION ERROR: DROPBOX_API_TOKEN is not set.');
         return {
             statusCode: 500,
@@ -28,7 +27,7 @@ exports.handler = async function(event, context) {
         const listFilesResponse = await fetch(listFilesUrl, {
             method: 'POST',
             headers: {
-                'Authorization': 'Bearer ' + DROPBOX_TOKEN,
+                'Authorization': 'Bearer ' + process.env.DROPBOX_API_TOKEN,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(listFilesPayload),
@@ -67,10 +66,11 @@ exports.handler = async function(event, context) {
             const thumbnailResponse = await fetch(getThumbnailUrl, {
                 method: 'POST',
                 headers: {
-                    'Authorization': 'Bearer ' + DROPBOX_TOKEN,
+                    'Authorization': 'Bearer ' + process.env.DROPBOX_API_TOKEN,
                     'Content-Type': 'application/json',
+                    'Dropbox-API-Arg': JSON.stringify(getThumbnailPayload), // Argumenty w nagłówku
                 },
-                body: JSON.stringify(getThumbnailPayload),
+                body: null, // Ciało żądania jest puste
             });
 
             let thumbnailData = null;
@@ -93,10 +93,11 @@ exports.handler = async function(event, context) {
             const fullSizeLinkResponse = await fetch(getTemporaryLinkUrl, {
                 method: 'POST',
                 headers: {
-                    'Authorization': 'Bearer ' + DROPBOX_TOKEN,
+                    'Authorization': 'Bearer ' + process.env.DROPBOX_API_TOKEN,
                     'Content-Type': 'application/json',
+                    'Dropbox-API-Arg': JSON.stringify(getTemporaryLinkPayload), // Argumenty w nagłówku
                 },
-                body: JSON.stringify(getTemporaryLinkPayload),
+                body: null, // Ciało żądania jest puste
             });
 
             let fullSizeUrl = null;
