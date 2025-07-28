@@ -16,6 +16,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadProgressText = document.getElementById('uploadProgressText');
     const progressBar = document.getElementById('progressBar');
 
+    // Elementy popupu sukcesu
+    const successOverlay = document.getElementById('successOverlay');
+    const successOkButton = document.getElementById('successOkButton');
+
     // Zmienne stanu dla nieskończonego przewijania i lightboxa
     let currentCursor = null;
     let hasMoreImages = true;
@@ -56,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const data = await response.json();
             console.log('FRONTEND LOG: Data received from get-dropbox-images:', data);
-            const images = data.images;
+            const images = data.images; // Obrazy są już posortowane od najnowszych do najstarszych przez backend
 
             if (images.length === 0 && !append) {
                 galleryGrid.innerHTML = '<p class="no-images-message">Brak zdjęć w galerii. Bądź pierwszym, który coś doda!</p>';
@@ -71,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 imgContainer.classList.add('gallery-item');
 
                 const img = document.createElement('img');
-                                img.src = image.url; // Użyj bezpośredniego URL do obrazu
+                img.src = image.url; // Użyj bezpośredniego URL do obrazu
                 img.alt = image.name;
                 img.loading = 'lazy'; // Lazy loading
 
@@ -82,10 +86,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 imgContainer.appendChild(img);
-                galleryGrid.appendChild(imgContainer);
+                galleryGrid.appendChild(imgContainer); // Dodaj na koniec, bo backend już posortował
             });
-
-            
 
             currentCursor = data.cursor; // Użyj kursora z odpowiedzi Dropboxa
             hasMoreImages = data.has_more; // Użyj has_more z odpowiedzi Dropboxa
@@ -110,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function showImageInLightbox(index) {
         if (index < 0 || index >= allGalleryImages.length) return; // Sprawdź granice
 
-        currentImageIndex = index; // <--- TA LINIA ZOSTAŁA DODANA
+        currentImageIndex = index;
 
         const image = allGalleryImages[index];
         lightboxImage.src = image.url;
@@ -273,9 +275,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             setTimeout(async () => {
                 uploadOverlay.classList.remove('active');
-                document.getElementById('successOverlay').classList.add('active'); // Pokaż popup sukcesu
-                document.getElementById('successOkButton').onclick = async () => {
-                    document.getElementById('successOverlay').classList.remove('active'); // Ukryj popup sukcesu
+                successOverlay.classList.add('active'); // Pokaż popup sukcesu
+                successOkButton.onclick = async () => {
+                    successOverlay.classList.remove('active'); // Ukryj popup sukcesu
                     currentCursor = null;
                     hasMoreImages = true;
                     await loadGalleryImages(); // Odśwież galerię
@@ -294,10 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function getDropboxToken() {
-        // Ta funkcja powinna bezpiecznie pobierać token, np. z innej funkcji Netlify
-        // Na potrzeby tego przykładu, zakładamy, że token jest dostępny po stronie klienta (co NIE jest bezpieczne w produkcji)
-        // W rzeczywistym scenariuszu, token powinien być zarządzany wyłącznie po stronie serwera.
-        const response = await fetch('/.netlify/functions/get-dropbox-token'); // Załóżmy, że masz taką funkcję
+        const response = await fetch('/.netlify/functions/get-dropbox-token');
         if (!response.ok) {
             throw new Error('Nie można pobrać tokena Dropbox');
         }
