@@ -66,13 +66,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             allGalleryImages = allGalleryImages.concat(images); // Dodaj nowe obrazy do globalnej listy
+            // Sortuj wszystkie obrazy od najnowszego do najstarszego na podstawie nazwy pliku (timestamp)
+            allGalleryImages.sort((a, b) => b.name.localeCompare(a.name));
 
-            images.forEach((image, index) => {
+            // Wyczyść galerię przed ponownym renderowaniem
+            galleryGrid.innerHTML = '';
+
+            allGalleryImages.forEach((image) => {
                 const imgContainer = document.createElement('div');
                 imgContainer.classList.add('gallery-item');
 
                 const img = document.createElement('img');
-                                img.src = image.url; // Użyj bezpośredniego URL do obrazu
+                img.src = image.url; // Użyj bezpośredniego URL do obrazu
                 img.alt = image.name;
                 img.loading = 'lazy'; // Lazy loading
 
