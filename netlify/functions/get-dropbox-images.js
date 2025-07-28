@@ -67,8 +67,8 @@ exports.handler = async function(event, context) {
                 method: 'POST',
                 headers: {
                     'Authorization': 'Bearer ' + process.env.DROPBOX_API_TOKEN,
-                    'Content-Type': 'application/json',
-                    'Dropbox-API-Arg': JSON.stringify(getThumbnailPayload), // Argumenty w nagłówku
+                    'Content-Type': 'application/octet-stream', // POPRAWIONE: Zmieniono na octet-stream
+                    'Dropbox-API-Arg': JSON.stringify(getThumbnailPayload),
                 },
                 body: null, // Ciało żądania jest puste
             });
@@ -95,9 +95,9 @@ exports.handler = async function(event, context) {
                 headers: {
                     'Authorization': 'Bearer ' + process.env.DROPBOX_API_TOKEN,
                     'Content-Type': 'application/json',
-                    'Dropbox-API-Arg': JSON.stringify(getTemporaryLinkPayload), // Argumenty w nagłówku
+                    // POPRAWIONE: Usunięto 'Dropbox-API-Arg'
                 },
-                body: null, // Ciało żądania jest puste
+                body: JSON.stringify(getTemporaryLinkPayload), // POPRAWIONE: Argumenty w ciele żądania
             });
 
             let fullSizeUrl = null;
