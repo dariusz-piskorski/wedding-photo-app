@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 imgContainer.classList.add('gallery-item');
 
                 const img = document.createElement('img');
-                img.src = image.url; // Użyj bezpośredniego URL do obrazu
+                                img.src = image.url; // Użyj bezpośredniego URL do obrazu
                 img.alt = image.name;
                 img.loading = 'lazy'; // Lazy loading
 

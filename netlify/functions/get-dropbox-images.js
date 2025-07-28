@@ -87,7 +87,6 @@ exports.handler = async function(event, context) {
         );
 
         const imagePromises = files.map(async (file) => {
-            // Get temporary link for full image
             const getTemporaryLinkUrl = 'https://api.dropboxapi.com/2/files/get_temporary_link';
             const getTemporaryLinkPayload = { path: file.path_lower };
 
@@ -100,47 +99,11 @@ exports.handler = async function(event, context) {
                 body: JSON.stringify(getTemporaryLinkPayload),
             });
 
-            let fullImageUrl = null;
             if (linkResponse.ok) {
                 const linkData = await linkResponse.json();
-                fullImageUrl = linkData.link;
-            } else {
-                console.error(`Failed to get temp link for full image ${file.name}:`, await linkResponse.text());
+                return { name: file.name, url: linkData.link };
             }
-
-            // Get temporary link for thumbnail
-            const getThumbnailUrl = 'https://content.dropboxapi.com/2/files/get_thumbnail_v2';
-            const getThumbnailArg = {
-                resource: {
-                    ".tag": "path",
-                    path: file.path_lower
-                },
-                format: 'jpeg',
-                size: 'w640h480',
-                mode: 'strict'
-            };
-
-            const thumbnailResponse = await fetch(getThumbnailUrl, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(getThumbnailArg),
-            });
-
-            let thumbnailUrl = null;
-            if (thumbnailResponse.ok) {
-                const thumbnailBuffer = await thumbnailResponse.arrayBuffer();
-                const base64Thumbnail = Buffer.from(thumbnailBuffer).toString('base64');
-                thumbnailUrl = `data:image/jpeg;base64,${base64Thumbnail}`;
-            } else {
-                console.error(`Failed to get thumbnail for ${file.name}:`, await thumbnailResponse.text());
-            }
-
-            if (fullImageUrl && thumbnailUrl) {
-                return { name: file.name, thumbnailUrl: thumbnailUrl, fullImageUrl: fullImageUrl };
-            }
+            console.error(`Failed to get temp link for ${file.name}:`, await linkResponse.text());
             return null;
         });
 
