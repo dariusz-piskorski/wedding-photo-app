@@ -87,6 +87,7 @@ exports.handler = async function(event, context) {
         );
 
         const imagePromises = files.map(async (file) => {
+            // Get temporary link for full image
             const getTemporaryLinkUrl = 'https://api.dropboxapi.com/2/files/get_temporary_link';
             const getTemporaryLinkPayload = { path: file.path_lower };
 
@@ -99,11 +100,43 @@ exports.handler = async function(event, context) {
                 body: JSON.stringify(getTemporaryLinkPayload),
             });
 
+            let fullImageUrl = null;
             if (linkResponse.ok) {
                 const linkData = await linkResponse.json();
-                return { name: file.name, url: linkData.link };
+                fullImageUrl = linkData.link;
+            } else {
+                console.error(`Failed to get temp link for full image ${file.name}:`, await linkResponse.text());
             }
-            console.error(`Failed to get temp link for ${file.name}:`, await linkResponse.text());
+
+            // Get temporary link for thumbnail
+            const getThumbnailUrl = 'https://api.dropboxapi.com/2/files/get_thumbnail';
+            const getThumbnailPayload = {
+                path: file.path_lower,
+                format: 'jpeg',
+                size: 'w640h480',
+                mode: 'strict'
+            };
+
+            const thumbnailResponse = await fetch(getThumbnailUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(getThumbnailPayload),
+            });
+
+            let thumbnailUrl = null;
+            if (thumbnailResponse.ok) {
+                const thumbnailData = await thumbnailResponse.json();
+                thumbnailUrl = thumbnailData.link;
+            } else {
+                console.error(`Failed to get temp link for thumbnail ${file.name}:`, await thumbnailResponse.text());
+            }
+
+            if (fullImageUrl && thumbnailUrl) {
+                return { name: file.name, thumbnailUrl: thumbnailUrl, fullImageUrl: fullImageUrl };
+            }
             return null;
         });
 
