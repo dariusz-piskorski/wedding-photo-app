@@ -273,12 +273,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
             setTimeout(async () => {
                 uploadOverlay.classList.remove('active');
-                currentCursor = null;
-                hasMoreImages = true;
-                await loadGalleryImages();
-                setTimeout(() => {
+                document.getElementById('successOverlay').classList.add('active'); // Pokaż popup sukcesu
+                document.getElementById('successOkButton').onclick = async () => {
+                    document.getElementById('successOverlay').classList.remove('active'); // Ukryj popup sukcesu
+                    currentCursor = null;
+                    hasMoreImages = true;
+                    await loadGalleryImages(); // Odśwież galerię
                     progressBar.style.width = '0%';
-                }, 500);
+                };
             }, 2000);
 
         } catch (error) {
