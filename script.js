@@ -110,6 +110,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function showImageInLightbox(index) {
         if (index < 0 || index >= allGalleryImages.length) return; // Sprawdź granice
 
+        currentImageIndex = index; // <--- TA LINIA ZOSTAŁA DODANA
+
         const image = allGalleryImages[index];
         lightboxImage.src = image.url;
         downloadButton.href = image.url;
@@ -117,8 +119,8 @@ document.addEventListener('DOMContentLoaded', () => {
         lightbox.classList.add('active');
 
         // Pokaż/ukryj strzałki nawigacyjne
-        prevButton.style.display = (index > 0) ? 'flex' : 'none';
-        nextButton.style.display = (index < allGalleryImages.length - 1) ? 'flex' : 'none';
+        prevButton.style.display = (currentImageIndex > 0) ? 'flex' : 'none';
+        nextButton.style.display = (currentImageIndex < allGalleryImages.length - 1) ? 'flex' : 'none';
     }
 
     // Obsługa nawigacji w lightboxie
