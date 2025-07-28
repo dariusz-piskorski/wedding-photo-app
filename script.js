@@ -56,46 +56,68 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const data = await response.json();
             console.log('FRONTEND LOG: Data received from get-dropbox-images:', data);
-            const images = data.images;
+            let fetchedImages = data.images; // Obrazy z Dropbox (od najstarszych do najnowszych wg nazwy/timestampu)
 
-            if (images.length === 0 && !append) {
+            if (fetchedImages.length === 0 && !append) {
                 galleryGrid.innerHTML = '<p class="no-images-message">Brak zdjęć w galerii. Bądź pierwszym, który coś doda!</p>';
-            } else if (images.length === 0 && append) {
+            } else if (fetchedImages.length === 0 && append) {
                 // Brak nowych obrazów do dodania
             }
 
-            allGalleryImages = allGalleryImages.concat(images); // Dodaj nowe obrazy do globalnej listy
-            // Sortuj wszystkie obrazy od najnowszego do najstarszego na podstawie nazwy pliku (timestamp)
-            allGalleryImages.sort((a, b) => b.name.localeCompare(a.name));
+            // Odwróć kolejność pobranych obrazów, aby najnowsze były na początku tej partii
+            fetchedImages.reverse();
 
-            // Wyczyść galerię przed ponownym renderowaniem
-            galleryGrid.innerHTML = '';
+            // Zaktualizuj globalną listę wszystkich obrazów
+            if (!append) {
+                allGalleryImages = fetchedImages; // Pierwsze ładowanie: ustaw na odwróconą partię
+            } else {
+                // Kolejne ładowanie: dodaj nową (odwróconą) partię na początek istniejących obrazów
+                allGalleryImages = fetchedImages.concat(allGalleryImages);
+            }
 
-            allGalleryImages.forEach((image) => {
+            // Dodaj obrazy do DOM
+            fetchedImages.forEach((image) => {
                 const imgContainer = document.createElement('div');
                 imgContainer.classList.add('gallery-item');
 
                 const img = document.createElement('img');
-                img.src = image.url; // Użyj bezpośredniego URL do obrazu
+                img.src = image.url;
                 img.alt = image.name;
-                img.loading = 'lazy'; // Lazy loading
+                img.loading = 'lazy';
 
-                // Obsługa kliknięcia na miniaturkę
                 img.addEventListener('click', () => {
-                    currentImageIndex = allGalleryImages.indexOf(image); // Ustaw indeks klikniętego obrazu
+                    currentImageIndex = allGalleryImages.indexOf(image);
                     showImageInLightbox(currentImageIndex);
                 });
 
-                imgContainer.appendChild(img);
-                galleryGrid.appendChild(imgContainer);
+                // Dla pierwszego ładowania, dodaj na koniec, aby zachować kolejność po odwróceniu.
+                // Dla kolejnych ładowań, dodaj na początek, aby najnowsze były na górze.
+                if (!append) {
+                    galleryGrid.appendChild(imgContainer);
+                } else {
+                    galleryGrid.prepend(imgContainer);
+                }
             });
 
-            
-
-            currentCursor = data.cursor; // Użyj kursora z odpowiedzi Dropboxa
-            hasMoreImages = data.has_more; // Użyj has_more z odpowiedzi Dropboxa
+            currentCursor = data.cursor;
+            hasMoreImages = data.has_more;
 
         } catch (error) {
+            console.error('Błąd ładowania galerii:', error);
+            if (!append) {
+                galleryGrid.innerHTML = '<p class="error-message">Nie udało się załadować galerii. Spróbuj odświeżyć stronę.</p>';
+            }
+        } finally {
+            isLoadingImages = false;
+            if (hasMoreImages) {
+                loadingIndicator.style.display = 'block';
+            } else {
+                loadingIndicator.style.display = 'none';
+            }
+        }
+    }
+
+            
             console.error('Błąd ładowania galerii:', error);
             if (!append) {
                 galleryGrid.innerHTML = '<p class="error-message">Nie udało się załadować galerii. Spróbuj odświeżyć stronę.</p>';
