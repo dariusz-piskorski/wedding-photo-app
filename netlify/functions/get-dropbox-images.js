@@ -58,7 +58,10 @@ exports.handler = async function(event, context) {
             };
         }
 
-        const files = listFilesData.entries.filter(entry => entry['.tag'] === 'file');
+        const files = listFilesData.entries.filter(entry => 
+            entry['.tag'] === 'file' &&
+            /\.(jpe?g|png|gif|bmp|webp)$/i.test(entry.name)
+        );
         console.log('FUNCTION LOG: Found files:', files.length);
 
         const imagePromises = files.map(async (file) => {
