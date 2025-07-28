@@ -341,3 +341,21 @@ body {
         grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     }
 }
+
+/* Footer Styles */
+footer {
+    width: 100%;
+    padding: 20px;
+    text-align: center;
+    color: var(--white); /* Biały tekst dla kontrastu z tłem */
+    background-color: rgba(0, 0, 0, 0.5); /* Półprzezroczyste czarne tło */
+    margin-top: auto; /* Przypnij stopkę do dołu strony */
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2); /* Delikatny cień */
+}
+
+footer p {
+    margin: 5px 0;
+    font-size: 1em;
+    font-family: 'Dancing Script', cursive; /* Użyj tej samej czcionki co nagłówki */
+    font-weight: bold;
+}
