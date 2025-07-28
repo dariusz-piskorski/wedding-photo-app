@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentCursor = null;
     let hasMoreImages = true;
     let isLoadingImages = false;
-    const imagesPerLoad = 20; // Liczba obrazów ładowanych jednorazowo
+    const imagesPerLoad = 10; // Liczba obrazów ładowanych jednorazowo
     let allGalleryImages = []; // Przechowuje wszystkie załadowane obrazy do nawigacji
     let currentImageIndex = 0; // Indeks aktualnie wyświetlanego obrazu w lightboxie
 
