@@ -1,49 +1,72 @@
 const fetch = require('node-fetch');
 
-exports.handler = async function(event, context) {
-    console.log('FUNCTION LOG: DROPBOX_API_TOKEN (masked):', process.env.DROPBOX_API_TOKEN ? process.env.DROPBOX_API_TOKEN.substring(0, 5) + '...' : 'Not set');
+// Funkcja do uzyskiwania nowego tokenu dostępowego przy użyciu refresh tokena
+async function getAccessToken() {
+    const refreshToken = process.env.DROPBOX_REFRESH_TOKEN;
+    const appKey = process.env.DROPBOX_APP_KEY;
+    const appSecret = process.env.DROPBOX_APP_SECRET;
 
-    if (!process.env.DROPBOX_API_TOKEN) {
-        console.error('FUNCTION ERROR: DROPBOX_API_TOKEN is not set.');
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ message: 'Błąd konfiguracji: Brak tokenu Dropbox API.' }),
-        };
+    if (!refreshToken || !appKey || !appSecret) {
+        throw new Error('Brak konfiguracji: Zmienne środowiskowe Dropbox (REFRESH_TOKEN, APP_KEY, APP_SECRET) nie są ustawione.');
     }
 
+    const tokenUrl = 'https://api.dropboxapi.com/oauth2/token';
+    const params = new URLSearchParams();
+    params.append('grant_type', 'refresh_token');
+    params.append('refresh_token', refreshToken);
+
+    // Dropbox wymaga autoryzacji Basic z kluczem i sekretem aplikacji
+    const basicAuth = Buffer.from(`${appKey}:${appSecret}`).toString('base64');
+
+    const response = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Basic ${basicAuth}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params,
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+        console.error('Dropbox token refresh error response:', data);
+        throw new Error(`Błąd odświeżania tokenu Dropbox: ${data.error_description || 'Nieznany błąd'}`);
+    }
+
+    return data.access_token;
+}
+
+exports.handler = async function(event, context) {
     try {
+        // 1. Zawsze uzyskuj świeży, krótkoterminowy token dostępowy
+        const accessToken = await getAccessToken();
+
         const { cursor, limit } = event.queryStringParameters;
-        const defaultLimit = 20; // Domyślna liczba obrazów do pobrania na żądanie
+        const defaultLimit = 20;
         const fetchLimit = parseInt(limit) || defaultLimit;
 
         let apiEndpoint;
         let apiPayload;
 
+        // 2. Użyj uzyskanego tokenu do komunikacji z API Dropbox
         if (cursor) {
             apiEndpoint = 'https://api.dropboxapi.com/2/files/list_folder/continue';
-            apiPayload = {
-                cursor: cursor
-            };
-            console.log('FUNCTION LOG: Sending list_folder/continue request to Dropbox with cursor:', cursor);
+            apiPayload = { cursor: cursor };
         } else {
             apiEndpoint = 'https://api.dropboxapi.com/2/files/list_folder';
             apiPayload = {
-                path: '/slubne-wspomnienia-gallery/', // Ścieżka do folderu galerii
+                path: '/slubne-wspomnienia-gallery/',
                 recursive: false,
-                limit: fetchLimit, // Zastosuj limit dla początkowego wywołania
-                include_media_info: false, // Not needed for sorting here
+                limit: fetchLimit,
+                include_media_info: false,
                 include_deleted: false,
-                include_has_explicit_shared_members: false,
-                include_mounted_folders: true,
-                include_non_downloadable_files: false
             };
-            console.log('FUNCTION LOG: Sending list_folder request to Dropbox with limit:', fetchLimit);
         }
 
         const listFilesResponse = await fetch(apiEndpoint, {
             method: 'POST',
             headers: {
-                'Authorization': 'Bearer ' + process.env.DROPBOX_API_TOKEN,
+                'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(apiPayload),
@@ -51,31 +74,26 @@ exports.handler = async function(event, context) {
 
         const listFilesData = await listFilesResponse.json();
         if (!listFilesResponse.ok) {
-            const errorDetails = listFilesData.error_summary || listFilesData.error || 'Unknown Dropbox API error';
-            console.error('FUNCTION ERROR: list_folder failed. Status:', listFilesResponse.status, 'StatusText:', listFilesResponse.statusText, 'Details:', errorDetails);
+            const errorDetails = listFilesData.error_summary || 'Unknown Dropbox API error';
+            console.error('Dropbox API Error:', listFilesData);
             return {
                 statusCode: listFilesResponse.status,
-                body: JSON.stringify({
-                    message: `Błąd Dropbox API: ${errorDetails} (Status: ${listFilesResponse.status}, ${listFilesResponse.statusText || 'Brak statusText'})`
-                }),
+                body: JSON.stringify({ message: `Błąd Dropbox API: ${errorDetails}` }),
             };
         }
 
         const files = listFilesData.entries.filter(entry =>
-            entry['.tag'] === 'file' &&
-            /\.(jpe?g|png|gif|bmp|webp)$/i.test(entry.name)
+            entry['.tag'] === 'file' && /\.(jpe?g|png|gif|bmp|webp)$/i.test(entry.name)
         );
-        console.log('FUNCTION LOG: Found files:', files.length);
 
         const imagePromises = files.map(async (file) => {
             const getTemporaryLinkUrl = 'https://api.dropboxapi.com/2/files/get_temporary_link';
             const getTemporaryLinkPayload = { path: file.path_lower };
 
-            console.log(`FUNCTION LOG: Sending get_temporary_link request for: ${file.name}`);
             const linkResponse = await fetch(getTemporaryLinkUrl, {
                 method: 'POST',
                 headers: {
-                    'Authorization': 'Bearer ' + process.env.DROPBOX_API_TOKEN,
+                    'Authorization': `Bearer ${accessToken}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(getTemporaryLinkPayload),
@@ -83,34 +101,28 @@ exports.handler = async function(event, context) {
 
             if (linkResponse.ok) {
                 const linkData = await linkResponse.json();
-                console.log(`FUNCTION LOG: Link generated for: ${file.name}`);
-                return {
-                    name: file.name,
-                    url: linkData.link,
-                };
-            } else {
-                console.error(`FUNCTION ERROR: Failed to get link for ${file.name}:`, await linkResponse.text());
-                return null;
+                return { name: file.name, url: linkData.link };
             }
+            console.error(`Failed to get temp link for ${file.name}:`, await linkResponse.text());
+            return null;
         });
 
         const images = (await Promise.all(imagePromises)).filter(img => img !== null);
 
-        console.log('FUNCTION LOG: Returning images count:', images.length);
         return {
             statusCode: 200,
             body: JSON.stringify({
                 images: images,
-                cursor: listFilesData.cursor, // Use Dropbox's cursor
+                cursor: listFilesData.cursor,
                 has_more: listFilesData.has_more
             }),
         };
 
     } catch (error) {
-        console.error('FUNCTION ERROR: Uncaught error in get-dropbox-images:', error);
+        console.error('FUNCTION ERROR:', error);
         return {
             statusCode: 500,
-            body: JSON.stringify({ message: 'Wystąpił błąd serwera podczas pobierania obrazów.', error: error.message }),
+            body: JSON.stringify({ message: error.message || 'Wystąpił krytyczny błąd serwera.' }),
         };
     }
 };

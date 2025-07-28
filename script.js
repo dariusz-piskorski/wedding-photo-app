@@ -49,7 +49,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const response = await fetch(url);
             if (!response.ok) {
-                throw new Error(`Błąd funkcji Netlify (galeria): ${response.statusText}`);
+                // Spróbuj odczytać treść błędu z odpowiedzi, aby uzyskać więcej szczegółów
+                const errorData = await response.json().catch(() => null); // .catch na wypadek gdyby odpowiedź nie była JSONem
+                const errorMessage = errorData ? errorData.message : response.statusText;
+                throw new Error(`Błąd funkcji Netlify (galeria): ${errorMessage}`);
             }
             const data = await response.json();
             console.log('FRONTEND LOG: Data received from get-dropbox-images:', data);
