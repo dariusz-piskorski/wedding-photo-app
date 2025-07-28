@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressBar = document.getElementById('progressBar');
 
     // Zmienne stanu dla nieskończonego przewijania
-    let currentCursor = null;
+    let currentOffset = 0; // Zmieniono z currentCursor na currentOffset
     let hasMoreImages = true;
     let isLoadingImages = false;
     const imagesPerLoad = 20; // Liczba obrazów ładowanych jednorazowo
@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!append) {
             galleryGrid.innerHTML = ''; // Wyczyść galerię tylko przy pierwszym ładowaniu
-            currentCursor = null; // Zresetuj kursor
+            currentOffset = 0; // Zresetuj offset
             hasMoreImages = true; // Zresetuj flagę
         }
 
@@ -37,9 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let url = '/.netlify/functions/get-dropbox-images';
             const params = new URLSearchParams();
             params.append('limit', imagesPerLoad);
-            if (currentCursor) {
-                params.append('cursor', currentCursor);
-            }
+            params.append('cursor', currentOffset); // Wysyłaj offset jako cursor
             url += `?${params.toString()}`;
 
             const response = await fetch(url);
@@ -82,8 +80,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 galleryGrid.appendChild(loadingIndicator);
             }
 
-            currentCursor = data.cursor;
-            hasMoreImages = data.has_more;
+            currentOffset += images.length; // Zwiększ offset o liczbę załadowanych obrazów
+            hasMoreImages = data.has_more; // Użyj has_more z odpowiedzi serwera
 
         } catch (error) {
             console.error('Błąd ładowania galerii:', error);
@@ -149,6 +147,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (let i = 0; i < totalFiles; i++) {
             const file = files[i];
+            const now = new Date();
+            const timestamp = now.getFullYear().toString() +
+                              (now.getMonth() + 1).toString().padStart(2, '0') +
+                              now.getDate().toString().padStart(2, '0') +
+                              '_' +
+                              now.getHours().toString().padStart(2, '0') +
+                              now.getMinutes().toString().padStart(2, '0') +
+                              now.getSeconds().toString().padStart(2, '0');
+            const newFilename = `${timestamp}_${file.name}`;
+
             uploadProgressText.textContent = `Przesyłanie pliku ${i + 1} z ${totalFiles}: ${file.name}`;
 
             try {
@@ -156,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch('/.netlify/functions/get-dropbox-upload-link', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ filename: file.name }),
+                    body: JSON.stringify({ filename: newFilename }), // Użyj nowej nazwy pliku z timestampem
                 });
 
                 if (!response.ok) {
@@ -201,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(async () => {
             uploadOverlay.classList.remove('active');
             // Zresetuj stan paginacji przed odświeżeniem galerii
-            currentCursor = null;
+            currentOffset = 0; // Zresetuj offset
             hasMoreImages = true;
             await loadGalleryImages(); // Odśwież galerię RAZ, po wszystkim
             // Zresetuj stan paska postępu na następny raz
