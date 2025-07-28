@@ -277,6 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
             confirmButton.classList.add('confirm-upload-button'); // Dodaj klasę dla stylizacji
             confirmButton.innerHTML = '<i class="fas fa-check"></i> Gotowe!'; // Dodaj ikonę i tekst
 
+            uploadProgressText.appendChild(document.createElement('br')); // Dodaj nową linię przed przyciskiem
             uploadProgressText.appendChild(confirmButton); // Dodaj przycisk pod tekstem statusu
 
             confirmButton.addEventListener('click', async () => {
