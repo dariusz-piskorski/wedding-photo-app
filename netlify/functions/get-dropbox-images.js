@@ -109,6 +109,9 @@ exports.handler = async function(event, context) {
 
         const images = (await Promise.all(imagePromises)).filter(img => img !== null);
 
+        // Reverse the order of the images
+        images.reverse();
+
         return {
             statusCode: 200,
             body: JSON.stringify({

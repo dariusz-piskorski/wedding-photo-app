@@ -64,14 +64,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Brak nowych obrazów do dodania
             }
 
-            allGalleryImages = allGalleryImages.concat(images); // Dodaj nowe obrazy do globalnej listy
+            allGalleryImages = images.concat(allGalleryImages); // Dodaj nowe obrazy na początek globalnej listy
 
-            images.forEach((image, index) => {
+            images.reverse().forEach((image, index) => {
                 const imgContainer = document.createElement('div');
                 imgContainer.classList.add('gallery-item');
 
                 const img = document.createElement('img');
-                                img.src = image.url; // Użyj bezpośredniego URL do obrazu
+                img.src = image.url; // Użyj bezpośredniego URL do obrazu
                 img.alt = image.name;
                 img.loading = 'lazy'; // Lazy loading
 
@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 imgContainer.appendChild(img);
-                galleryGrid.appendChild(imgContainer);
+                galleryGrid.prepend(imgContainer);
             });
 
             
