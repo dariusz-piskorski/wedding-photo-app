@@ -15,11 +15,8 @@
 
 body {
     font-family: 'Roboto', sans-serif;
-    background-color: var(--background-light);
-    background-image: url('background.jpg'); /* Ustawienie obrazu tła */
-    background-size: cover; /* Pokryj całe tło */
-    background-position: center center; /* Wyśrodkuj obraz */
-    background-attachment: fixed; /* Tło nieruchome podczas przewijania */
+    background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url('background.jpg') no-repeat center center fixed; /* Półprzezroczysta warstwa i obraz tła */
+    background-size: 110%; /* Początkowy rozmiar dla animacji */
     color: var(--secondary-text);
     display: flex;
     flex-direction: column;
@@ -28,6 +25,16 @@ body {
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    animation: zoom-background 30s infinite alternate; /* Animacja powiększania/pomniejszania */
+}
+
+@keyframes zoom-background {
+    0% {
+        background-size: 110%;
+    }
+    100% {
+        background-size: 100%;
+    }
 }
 
 .action-button {
@@ -101,7 +108,7 @@ body {
 /* Gallery Section */
 .gallery-section {
     width: 100%;
-    background-color: var(--white);
+    background-color: rgba(255, 255, 255, 0.8); /* Lekka przezroczystość */
     padding: 30px;
     border-radius: 10px;
     box-shadow: 0 2px 10px var(--shadow-light);
