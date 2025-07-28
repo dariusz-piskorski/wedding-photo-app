@@ -1,9 +1,10 @@
 exports.handler = async function(event, context) {
     const { Buffer } = require('buffer'); // Jawny import Buffer
     const DROPBOX_TOKEN = process.env.DROPBOX_API_TOKEN; // Pobierz token z zmiennych środowiskowych Netlify
-    console.log('DROPBOX_API_TOKEN (masked):', DROPBOX_TOKEN ? DROPBOX_TOKEN.substring(0, 5) + '...' : 'Not set');
+    console.log('FUNCTION LOG: DROPBOX_API_TOKEN (masked):', DROPBOX_TOKEN ? DROPBOX_TOKEN.substring(0, 5) + '...' : 'Not set');
 
     if (!DROPBOX_TOKEN) {
+        console.error('FUNCTION ERROR: DROPBOX_API_TOKEN is not set.');
         return {
             statusCode: 500,
             body: JSON.stringify({ message: 'Błąd konfiguracji: Brak tokenu Dropbox API.' }),
@@ -23,6 +24,7 @@ exports.handler = async function(event, context) {
             include_non_downloadable_files: false
         };
 
+        console.log('FUNCTION LOG: Sending list_folder request to Dropbox.');
         const listFilesResponse = await fetch(listFilesUrl, {
             method: 'POST',
             headers: {
@@ -33,8 +35,11 @@ exports.handler = async function(event, context) {
         });
 
         const listFilesData = await listFilesResponse.json();
+        console.log('FUNCTION LOG: list_folder response status:', listFilesResponse.status);
+        console.log('FUNCTION LOG: list_folder response data:', listFilesData);
 
         if (!listFilesResponse.ok) {
+            console.error('FUNCTION ERROR: list_folder failed.', listFilesData);
             return {
                 statusCode: listFilesResponse.status,
                 body: JSON.stringify({ message: listFilesData.error_summary || 'Błąd podczas listowania plików Dropbox' }),
@@ -42,6 +47,7 @@ exports.handler = async function(event, context) {
         }
 
         const files = listFilesData.entries.filter(entry => entry['.tag'] === 'file');
+        console.log('FUNCTION LOG: Found files:', files.length);
 
         const images = [];
         for (const file of files) {
@@ -57,6 +63,7 @@ exports.handler = async function(event, context) {
                 mode: 'strict'
             };
 
+            console.log('FUNCTION LOG: Sending get_thumbnail_v2 request for:', file.name);
             const thumbnailResponse = await fetch(getThumbnailUrl, {
                 method: 'POST',
                 headers: {
@@ -68,12 +75,12 @@ exports.handler = async function(event, context) {
 
             let thumbnailData = null;
             if (thumbnailResponse.ok) {
-                // Miniatura jest zwracana jako binarna, musimy ją zakodować do base64
                 const arrayBuffer = await thumbnailResponse.arrayBuffer();
-                const buffer = Buffer.from(arrayBuffer); // Użyj Node.js Buffer
+                const buffer = Buffer.from(arrayBuffer); 
                 thumbnailData = buffer.toString('base64');
+                console.log('FUNCTION LOG: Thumbnail generated for:', file.name);
             } else {
-                console.error(`Błąd podczas pobierania miniatury dla ${file.name}:`, await thumbnailResponse.text());
+                console.error(`FUNCTION ERROR: Failed to get thumbnail for ${file.name}:`, await thumbnailResponse.text());
             }
 
             // Krok 3: Wygeneruj tymczasowy link do pełnego rozmiaru
@@ -82,6 +89,7 @@ exports.handler = async function(event, context) {
                 path: file.path_lower
             };
 
+            console.log('FUNCTION LOG: Sending get_temporary_link request for:', file.name);
             const fullSizeLinkResponse = await fetch(getTemporaryLinkUrl, {
                 method: 'POST',
                 headers: {
@@ -95,8 +103,9 @@ exports.handler = async function(event, context) {
             if (fullSizeLinkResponse.ok) {
                 const fullSizeLinkData = await fullSizeLinkResponse.json();
                 fullSizeUrl = fullSizeLinkData.link;
+                console.log('FUNCTION LOG: Full size link generated for:', file.name);
             } else {
-                console.error(`Błąd podczas generowania linku pełnego rozmiaru dla ${file.name}:`, await fullSizeLinkResponse.text());
+                console.error(`FUNCTION ERROR: Failed to get full size link for ${file.name}:`, await fullSizeLinkResponse.text());
             }
 
             if (thumbnailData && fullSizeUrl) {
@@ -108,13 +117,14 @@ exports.handler = async function(event, context) {
             }
         }
 
+        console.log('FUNCTION LOG: Returning images count:', images.length);
         return {
             statusCode: 200,
             body: JSON.stringify({ images }),
         };
 
     } catch (error) {
-        console.error('Błąd funkcji Netlify (get-dropbox-images):', error);
+        console.error('FUNCTION ERROR: Uncaught error in get-dropbox-images:', error);
         return {
             statusCode: 500,
             body: JSON.stringify({ message: 'Wystąpił błąd serwera podczas pobierania obrazów.', error: error.message }),
