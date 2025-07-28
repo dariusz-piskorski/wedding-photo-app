@@ -235,6 +235,12 @@ body {
     margin-right: 8px;
 }
 
+.download-all-button {
+    margin-top: 30px; /* Dodaj trochę odstępu od galerii */
+    margin-bottom: 20px; /* Dodaj odstęp od wskaźnika ładowania */
+    text-decoration: none; /* Usuń podkreślenie linku */
+}
+
 /* Upload Progress Overlay */
 .upload-overlay {
     display: none; /* Domyślnie ukryte */

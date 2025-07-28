@@ -26,7 +26,7 @@ exports.handler = async function(event, context) {
 
         const dropboxRequestPayload = {
             commit_info: {
-                path: '/' + filename,
+                path: '/slubne-wspomnienia-gallery/' + filename,
                 mode: 'add',
                 autorename: true,
                 mute: false

@@ -28,7 +28,7 @@ exports.handler = async function(event, context) {
         } else {
             apiEndpoint = 'https://api.dropboxapi.com/2/files/list_folder';
             apiPayload = {
-                path: '', // Pusta ścieżka oznacza folder główny aplikacji
+                path: '/slubne-wspomnienia-gallery/', // Ścieżka do folderu galerii
                 recursive: false,
                 limit: fetchLimit, // Zastosuj limit dla początkowego wywołania
                 include_media_info: false,
