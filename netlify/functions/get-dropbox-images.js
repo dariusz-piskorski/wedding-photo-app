@@ -42,15 +42,46 @@ exports.handler = async function(event, context) {
 
         const files = listFilesData.entries.filter(entry => entry['.tag'] === 'file');
 
-        // Krok 2: Dla każdego pliku, wygeneruj tymczasowy link bezpośredni
         const images = [];
         for (const file of files) {
+            // Krok 2: Pobierz miniaturę (base64)
+            const getThumbnailUrl = 'https://api.dropboxapi.com/2/files/get_thumbnail_v2';
+            const getThumbnailPayload = {
+                resource: {
+                    '.tag': 'path',
+                    path: file.path_lower
+                },
+                format: 'jpeg',
+                size: 'w640h480', // Rozmiar miniatury
+                mode: 'strict'
+            };
+
+            const thumbnailResponse = await fetch(getThumbnailUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + DROPBOX_TOKEN,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(getThumbnailPayload),
+            });
+
+            let thumbnailData = null;
+            if (thumbnailResponse.ok) {
+                // Miniatura jest zwracana jako binarna, musimy ją zakodować do base64
+                const arrayBuffer = await thumbnailResponse.arrayBuffer();
+                const buffer = Buffer.from(arrayBuffer); // Użyj Node.js Buffer
+                thumbnailData = buffer.toString('base64');
+            } else {
+                console.error(`Błąd podczas pobierania miniatury dla ${file.name}:`, await thumbnailResponse.text());
+            }
+
+            // Krok 3: Wygeneruj tymczasowy link do pełnego rozmiaru
             const getTemporaryLinkUrl = 'https://api.dropboxapi.com/2/files/get_temporary_link';
             const getTemporaryLinkPayload = {
                 path: file.path_lower
             };
 
-            const getTemporaryLinkResponse = await fetch(getTemporaryLinkUrl, {
+            const fullSizeLinkResponse = await fetch(getTemporaryLinkUrl, {
                 method: 'POST',
                 headers: {
                     'Authorization': 'Bearer ' + DROPBOX_TOKEN,
@@ -59,16 +90,20 @@ exports.handler = async function(event, context) {
                 body: JSON.stringify(getTemporaryLinkPayload),
             });
 
-            const getTemporaryLinkData = await getTemporaryLinkResponse.json();
+            let fullSizeUrl = null;
+            if (fullSizeLinkResponse.ok) {
+                const fullSizeLinkData = await fullSizeLinkResponse.json();
+                fullSizeUrl = fullSizeLinkData.link;
+            } else {
+                console.error(`Błąd podczas generowania linku pełnego rozmiaru dla ${file.name}:`, await fullSizeLinkResponse.text());
+            }
 
-            if (getTemporaryLinkResponse.ok) {
+            if (thumbnailData && fullSizeUrl) {
                 images.push({
                     name: file.name,
-                    url: getTemporaryLinkData.link,
-                    thumbnail: getTemporaryLinkData.link // W Dropboxie tymczasowy link jest już bezpośredni
+                    thumbnailData: thumbnailData,
+                    fullSizeUrl: fullSizeUrl
                 });
-            } else {
-                console.error(`Błąd podczas generowania linku dla ${file.name}:`, getTemporaryLinkData.error_summary);
             }
         }
 
