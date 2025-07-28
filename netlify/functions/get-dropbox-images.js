@@ -1,5 +1,6 @@
+const fetch = require('node-fetch');
+
 exports.handler = async function(event, context) {
-    const { Buffer } = require('buffer'); // Jawny import Buffer
     console.log('FUNCTION LOG: DROPBOX_API_TOKEN (masked):', process.env.DROPBOX_API_TOKEN ? process.env.DROPBOX_API_TOKEN.substring(0, 5) + '...' : 'Not set');
 
     if (!process.env.DROPBOX_API_TOKEN) {
@@ -16,11 +17,6 @@ exports.handler = async function(event, context) {
         const listFilesPayload = {
             path: '', // Pusta ścieżka oznacza folder główny aplikacji
             recursive: false,
-            include_media_info: false,
-            include_deleted: false,
-            include_has_explicit_shared_members: false,
-            include_mounted_folders: true,
-            include_non_downloadable_files: false
         };
 
         console.log('FUNCTION LOG: Sending list_folder request to Dropbox.');
@@ -34,9 +30,6 @@ exports.handler = async function(event, context) {
         });
 
         const listFilesData = await listFilesResponse.json();
-        console.log('FUNCTION LOG: list_folder response status:', listFilesResponse.status);
-        console.log('FUNCTION LOG: list_folder response data:', listFilesData);
-
         if (!listFilesResponse.ok) {
             console.error('FUNCTION ERROR: list_folder failed.', listFilesData);
             return {
@@ -48,75 +41,36 @@ exports.handler = async function(event, context) {
         const files = listFilesData.entries.filter(entry => entry['.tag'] === 'file');
         console.log('FUNCTION LOG: Found files:', files.length);
 
-        const images = [];
-        for (const file of files) {
-            // Krok 2: Pobierz miniaturę (base64)
-            const getThumbnailUrl = 'https://api.dropboxapi.com/2/files/get_thumbnail_v2';
-            const getThumbnailPayload = {
-                resource: {
-                    '.tag': 'path',
-                    path: file.path_lower
-                },
-                format: 'jpeg',
-                size: 'w640h480', // Rozmiar miniatury
-                mode: 'strict'
-            };
-
-            console.log('FUNCTION LOG: Sending get_thumbnail_v2 request for:', file.name);
-            const thumbnailResponse = await fetch(getThumbnailUrl, {
-                method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer ' + process.env.DROPBOX_API_TOKEN,
-                    'Content-Type': 'application/octet-stream', // POPRAWIONE: Zmieniono na octet-stream
-                    'Dropbox-API-Arg': JSON.stringify(getThumbnailPayload),
-                },
-                body: null, // Ciało żądania jest puste
-            });
-
-            let thumbnailData = null;
-            if (thumbnailResponse.ok) {
-                const arrayBuffer = await thumbnailResponse.arrayBuffer();
-                const buffer = Buffer.from(arrayBuffer); 
-                thumbnailData = buffer.toString('base64');
-                console.log('FUNCTION LOG: Thumbnail generated for:', file.name);
-            } else {
-                console.error(`FUNCTION ERROR: Failed to get thumbnail for ${file.name}:`, await thumbnailResponse.text());
-            }
-
-            // Krok 3: Wygeneruj tymczasowy link do pełnego rozmiaru
+        const imagePromises = files.map(async (file) => {
+            // Krok 2: Dla każdego pliku wygeneruj tymczasowy link do pełnego rozmiaru
             const getTemporaryLinkUrl = 'https://api.dropboxapi.com/2/files/get_temporary_link';
-            const getTemporaryLinkPayload = {
-                path: file.path_lower
-            };
+            const getTemporaryLinkPayload = { path: file.path_lower };
 
-            console.log('FUNCTION LOG: Sending get_temporary_link request for:', file.name);
-            const fullSizeLinkResponse = await fetch(getTemporaryLinkUrl, {
+            console.log(`FUNCTION LOG: Sending get_temporary_link request for: ${file.name}`);
+            const linkResponse = await fetch(getTemporaryLinkUrl, {
                 method: 'POST',
                 headers: {
                     'Authorization': 'Bearer ' + process.env.DROPBOX_API_TOKEN,
                     'Content-Type': 'application/json',
-                    // POPRAWIONE: Usunięto 'Dropbox-API-Arg'
                 },
-                body: JSON.stringify(getTemporaryLinkPayload), // POPRAWIONE: Argumenty w ciele żądania
+                body: JSON.stringify(getTemporaryLinkPayload),
             });
 
-            let fullSizeUrl = null;
-            if (fullSizeLinkResponse.ok) {
-                const fullSizeLinkData = await fullSizeLinkResponse.json();
-                fullSizeUrl = fullSizeLinkData.link;
-                console.log('FUNCTION LOG: Full size link generated for:', file.name);
-            } else {
-                console.error(`FUNCTION ERROR: Failed to get full size link for ${file.name}:`, await fullSizeLinkResponse.text());
-            }
-
-            if (thumbnailData && fullSizeUrl) {
-                images.push({
+            if (linkResponse.ok) {
+                const linkData = await linkResponse.json();
+                console.log(`FUNCTION LOG: Link generated for: ${file.name}`);
+                return {
                     name: file.name,
-                    thumbnailData: thumbnailData,
-                    fullSizeUrl: fullSizeUrl
-                });
+                    url: linkData.link, // Zwracamy bezpośredni link
+                };
+            } else {
+                console.error(`FUNCTION ERROR: Failed to get link for ${file.name}:`, await linkResponse.text());
+                return null; // Zwróć null w przypadku błędu
             }
-        }
+        });
+
+        // Poczekaj na wszystkie promisy i odfiltruj te, które zwróciły null
+        const images = (await Promise.all(imagePromises)).filter(img => img !== null);
 
         console.log('FUNCTION LOG: Returning images count:', images.length);
         return {

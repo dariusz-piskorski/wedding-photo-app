@@ -30,15 +30,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 imgContainer.classList.add('gallery-item');
 
                 const img = document.createElement('img');
-                img.src = `data:image/jpeg;base64,${image.thumbnailData}`; // Użyj danych base64 dla miniatury
+                img.src = image.url; // Użyj bezpośredniego URL do obrazu
                 img.alt = image.name;
                 img.loading = 'lazy'; // Lazy loading
 
                 // Obsługa kliknięcia na miniaturkę
                 img.addEventListener('click', () => {
                     lightbox.classList.add('active'); // Pokaż lightbox
-                    lightboxImage.src = image.fullSizeUrl; // Ustaw pełny obraz
-                    downloadButton.href = image.fullSizeUrl; // Ustaw link do pobrania
+                    lightboxImage.src = image.url; // Ustaw pełny obraz (ten sam URL)
+                    downloadButton.href = image.url; // Ustaw link do pobrania
                     downloadButton.download = image.name; // Ustaw nazwę pliku do pobrania
                 });
 
