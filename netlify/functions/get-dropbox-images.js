@@ -45,10 +45,13 @@ exports.handler = async function(event, context) {
 
             const listFilesData = await listFilesResponse.json();
             if (!listFilesResponse.ok) {
-                console.error('FUNCTION ERROR: list_folder failed.', listFilesData);
+                const errorDetails = listFilesData.error_summary || listFilesData.error || 'Unknown Dropbox API error';
+                console.error('FUNCTION ERROR: list_folder failed. Status:', listFilesResponse.status, 'StatusText:', listFilesResponse.statusText, 'Details:', errorDetails);
                 return {
                     statusCode: listFilesResponse.status,
-                    body: JSON.stringify({ message: listFilesData.error_summary || 'Błąd podczas listowania plików Dropbox' }),
+                    body: JSON.stringify({
+                        message: `Błąd Dropbox API: ${errorDetails} (Status: ${listFilesResponse.status}, ${listFilesResponse.statusText || 'Brak statusText'})`
+                    }),
                 };
             }
 
