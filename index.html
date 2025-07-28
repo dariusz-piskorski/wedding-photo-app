@@ -3,15 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WeddingWeb Uploader</title>
+    <title>Slubne Wspomnienia</title>
     <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <h1>Wgraj swoje wspomnienia z wesela!</h1>
-    <p>Wybierz plik (zdjęcie lub film), który chcesz wysłać. Dziękujemy za podzielenie się!</p>
-    <input type="file" id="fileInput">
-    <button id="uploadButton">Wyślij plik</button>
-    <div id="status"></div>
+    <header class="hero-section">
+        <h1 class="main-heading">Podziel się Wspomnieniami</h1>
+        <p class="sub-heading">Prześlij swoje najlepsze zdjęcia z naszego wesela! Dziękujemy, że jesteś z nami!</p>
+    </header>
+
+    <main class="content-section">
+        <div class="upload-area">
+            <input type="file" id="fileInput" multiple accept="image/*,video/*" style="display: none;">
+            <button id="uploadButton" class="action-button">Dodaj wspomnienia</button>
+            <div id="status" class="status-message"></div>
+        </div>
+
+        <section class="gallery-section">
+            <h2>Wasze Wspomnienia</h2>
+            <div class="gallery-grid">
+                <!-- Tutaj będą ładowane zdjęcia -->
+                <div class="gallery-placeholder"></div>
+                <div class="gallery-placeholder"></div>
+                <div class="gallery-placeholder"></div>
+            </div>
+        </section>
+    </main>
 
     <script src="script.js"></script>
 </body>

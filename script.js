@@ -3,7 +3,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadButton = document.getElementById('uploadButton');
     const statusDiv = document.getElementById('status');
 
-    uploadButton.addEventListener('click', async () => {
+    uploadButton.addEventListener('click', () => {
+        fileInput.click(); // Symuluj kliknięcie na ukrytym polu input
+    });
+
+    fileInput.addEventListener('change', async () => {
         const file = fileInput.files[0];
         if (!file) {
             statusDiv.textContent = 'Najpierw wybierz plik!';
