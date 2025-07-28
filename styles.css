@@ -16,6 +16,10 @@
 body {
     font-family: 'Roboto', sans-serif;
     background-color: var(--background-light);
+    background-image: url('background.jpg'); /* Ustawienie obrazu tła */
+    background-size: cover; /* Pokryj całe tło */
+    background-position: center center; /* Wyśrodkuj obraz */
+    background-attachment: fixed; /* Tło nieruchome podczas przewijania */
     color: var(--secondary-text);
     display: flex;
     flex-direction: column;
