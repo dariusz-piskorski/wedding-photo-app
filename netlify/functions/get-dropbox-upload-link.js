@@ -10,6 +10,7 @@ exports.handler = async function(event, context) {
     }
 
     const DROPBOX_TOKEN = process.env.DROPBOX_API_TOKEN; // Pobierz token z zmiennych środowiskowych Netlify
+    console.log('DROPBOX_API_TOKEN (masked):', DROPBOX_TOKEN ? DROPBOX_TOKEN.substring(0, 5) + '...' : 'Not set');
 
     if (!DROPBOX_TOKEN) {
         return {
