@@ -213,6 +213,38 @@ body {
     cursor: pointer;
 }
 
+.prev-button,
+.next-button {
+    cursor: pointer;
+    position: absolute;
+    top: 50%;
+    width: auto;
+    padding: 16px;
+    margin-top: -50px;
+    color: white;
+    font-weight: bold;
+    font-size: 20px;
+    transition: 0.6s ease;
+    border-radius: 0 3px 3px 0;
+    user-select: none;
+    -webkit-user-select: none;
+    background-color: rgba(0, 0, 0, 0.5); /* Półprzezroczyste tło */
+}
+
+.next-button {
+    right: 0;
+    border-radius: 3px 0 0 3px;
+}
+
+.prev-button {
+    left: 0;
+}
+
+.prev-button:hover,
+.next-button:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
 .download-button {
     /* Już dziedziczy większość stylów z .action-button */
     margin-top: 20px; /* Zachowaj specyficzny margines */

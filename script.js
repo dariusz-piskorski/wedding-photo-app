@@ -8,17 +8,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadButton = document.getElementById('downloadButton');
     const closeButton = document.querySelector('.close-button');
     const loadingIndicator = document.getElementById('loadingIndicator');
+    const prevButton = document.querySelector('.prev-button');
+    const nextButton = document.querySelector('.next-button');
 
     // Elementy okna postępu
     const uploadOverlay = document.getElementById('uploadOverlay');
     const uploadProgressText = document.getElementById('uploadProgressText');
     const progressBar = document.getElementById('progressBar');
 
-    // Zmienne stanu dla nieskończonego przewijania
-    let currentCursor = null; // Zmieniono z currentOffset na currentCursor
+    // Zmienne stanu dla nieskończonego przewijania i lightboxa
+    let currentCursor = null;
     let hasMoreImages = true;
     let isLoadingImages = false;
     const imagesPerLoad = 20; // Liczba obrazów ładowanych jednorazowo
+    let allGalleryImages = []; // Przechowuje wszystkie załadowane obrazy do nawigacji
+    let currentImageIndex = 0; // Indeks aktualnie wyświetlanego obrazu w lightboxie
 
     // Funkcja do ładowania obrazów do galerii
     async function loadGalleryImages(append = false) {
@@ -31,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
             galleryGrid.innerHTML = ''; // Wyczyść galerię tylko przy pierwszym ładowaniu
             currentCursor = null; // Zresetuj kursor
             hasMoreImages = true; // Zresetuj flagę
+            allGalleryImages = []; // Wyczyść listę obrazów przy nowym ładowaniu
         }
 
         try {
@@ -56,7 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Brak nowych obrazów do dodania
             }
 
-            images.forEach(image => {
+            allGalleryImages = allGalleryImages.concat(images); // Dodaj nowe obrazy do globalnej listy
+
+            images.forEach((image, index) => {
                 const imgContainer = document.createElement('div');
                 imgContainer.classList.add('gallery-item');
 
@@ -67,10 +74,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Obsługa kliknięcia na miniaturkę
                 img.addEventListener('click', () => {
-                    lightbox.classList.add('active'); // Pokaż lightbox
-                    lightboxImage.src = image.url; // Ustaw pełny obraz (ten sam URL)
-                    downloadButton.href = image.url; // Ustaw link do pobrania
-                    downloadButton.download = image.name; // Ustaw nazwę pliku do pobrania
+                    currentImageIndex = allGalleryImages.indexOf(image); // Ustaw indeks klikniętego obrazu
+                    showImageInLightbox(currentImageIndex);
                 });
 
                 imgContainer.appendChild(img);
@@ -100,6 +105,30 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     }
+
+    // Funkcja do wyświetlania obrazu w lightboxie
+    function showImageInLightbox(index) {
+        if (index < 0 || index >= allGalleryImages.length) return; // Sprawdź granice
+
+        const image = allGalleryImages[index];
+        lightboxImage.src = image.url;
+        downloadButton.href = image.url;
+        downloadButton.download = image.name;
+        lightbox.classList.add('active');
+
+        // Pokaż/ukryj strzałki nawigacyjne
+        prevButton.style.display = (index > 0) ? 'flex' : 'none';
+        nextButton.style.display = (index < allGalleryImages.length - 1) ? 'flex' : 'none';
+    }
+
+    // Obsługa nawigacji w lightboxie
+    prevButton.addEventListener('click', () => {
+        showImageInLightbox(currentImageIndex - 1);
+    });
+
+    nextButton.addEventListener('click', () => {
+        showImageInLightbox(currentImageIndex + 1);
+    });
 
     // Intersection Observer dla nieskończonego przewijania
     const observer = new IntersectionObserver((entries) => {
