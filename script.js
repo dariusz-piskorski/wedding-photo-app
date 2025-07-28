@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             console.log('FRONTEND LOG: Data received from get-dropbox-images:', data);
             const images = data.images;
+            images.reverse();
 
             if (images.length === 0 && !append) {
                 galleryGrid.innerHTML = '<p class="no-images-message">Brak zdjęć w galerii. Bądź pierwszym, który coś doda!</p>';
