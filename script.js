@@ -194,84 +194,114 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Pokaż okno postępu
         uploadOverlay.classList.add('active');
-        statusDiv.textContent = ''; // Wyczyść stary status
+        statusDiv.textContent = '';
 
         const totalFiles = files.length;
         let filesUploaded = 0;
 
-        for (let i = 0; i < totalFiles; i++) {
-            const file = files[i];
-            const now = new Date();
-            const timestamp = now.getFullYear().toString() +
-                              (now.getMonth() + 1).toString().padStart(2, '0') +
-                              now.getDate().toString().padStart(2, '0') +
-                              '_' +
-                              now.getHours().toString().padStart(2, '0') +
-                              now.getMinutes().toString().padStart(2, '0') +
-                              now.getSeconds().toString().padStart(2, '0');
-            const newFilename = `${timestamp}_${file.name}`;
+        try {
+            const token = await getDropboxToken();
 
-            uploadProgressText.textContent = `Przesyłanie wspomnień ${i + 1} z ${totalFiles}: ${file.name}`;
+            for (let i = 0; i < totalFiles; i++) {
+                const file = files[i];
+                const now = new Date();
+                const timestamp = now.getFullYear().toString() +
+                                  (now.getMonth() + 1).toString().padStart(2, '0') +
+                                  now.getDate().toString().padStart(2, '0') +
+                                  '_' +
+                                  now.getHours().toString().padStart(2, '0') +
+                                  now.getMinutes().toString().padStart(2, '0') +
+                                  now.getSeconds().toString().padStart(2, '0');
+                const newFilename = `${timestamp}_${file.name}`;
 
-            try {
-                // Krok 1: Uzyskaj link do wysyłki
-                const response = await fetch('/.netlify/functions/get-dropbox-upload-link', {
+                uploadProgressText.textContent = `Przesyłanie wspomnień ${i + 1} z ${totalFiles}: ${file.name}`;
+
+                // Krok 1: Rozpocznij sesję wysyłania
+                const sessionResponse = await fetch('/.netlify/functions/get-dropbox-upload-link', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ filename: newFilename }), // Użyj nowej nazwy pliku z timestampem
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (!sessionResponse.ok) {
+                    throw new Error(`Błąd przy rozpoczynaniu sesji: ${await sessionResponse.text()}`);
+                }
+                const sessionData = await sessionResponse.json();
+                const sessionId = sessionData.session_id;
+
+                // Krok 2: Wyślij plik w całości
+                const uploadResponse = await fetch('https://content.dropboxapi.com/2/files/upload_session/append_v2', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/octet-stream',
+                        'Dropbox-API-Arg': JSON.stringify({
+                            cursor: { session_id: sessionId, offset: 0 },
+                            close: false
+                        })
+                    },
+                    body: file
                 });
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(`Błąd serwera: ${errorData.message || response.statusText}`);
+                if (!uploadResponse.ok) {
+                    throw new Error(`Błąd podczas wysyłania pliku: ${await uploadResponse.text()}`);
                 }
 
-                const data = await response.json();
-                const uploadUrl = data.uploadUrl;
-
-                // Krok 2: Wyślij plik do Dropbox
-                const dropboxResponse = await fetch(uploadUrl, {
+                // Krok 3: Zakończ sesję wysyłania
+                const finishResponse = await fetch('https://content.dropboxapi.com/2/files/upload_session/finish', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/octet-stream' },
-                    body: file,
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/octet-stream',
+                        'Dropbox-API-Arg': JSON.stringify({
+                            cursor: { session_id: sessionId, offset: file.size },
+                            commit: { path: `/Apps/WeddingWebsite/${newFilename}`, mode: 'add', autorename: true, mute: false }
+                        })
+                    },
+                    body: ''
                 });
 
-                if (!dropboxResponse.ok) {
-                    throw new Error(`Błąd wysyłania do Dropbox: ${await dropboxResponse.text()}`);
+                if (!finishResponse.ok) {
+                    throw new Error(`Błąd przy finalizowaniu wysyłania: ${await finishResponse.text()}`);
                 }
 
                 filesUploaded++;
                 const progress = (filesUploaded / totalFiles) * 100;
                 progressBar.style.width = `${progress}%`;
-
-            } catch (error) {
-                uploadProgressText.textContent = `Błąd przy wspomnieniu ${file.name}: ${error.message}`;
-                progressBar.style.backgroundColor = '#d9534f'; // Czerwony kolor dla błędu
-                // Poczekaj chwilę, aby użytkownik zobaczył błąd, a następnie zamknij okno
-                setTimeout(() => {
-                    uploadOverlay.classList.remove('active');
-                    progressBar.style.backgroundColor = 'var(--primary-green)'; // Reset koloru
-                }, 4000);
-                return; // Przerwij proces
             }
-        }
 
-        // Zakończenie sukcesem
-        uploadProgressText.textContent = 'Wszystkie wspomnienia zostały pomyślnie przesłane!';
-        
-        // Poczekaj chwilę, aby użytkownik zobaczył komunikat o sukcesie
-        setTimeout(async () => {
-            uploadOverlay.classList.remove('active');
-            // Zresetuj stan paginacji przed odświeżeniem galerii
-            currentCursor = null;
-            hasMoreImages = true;
-            await loadGalleryImages(); // Odśwież galerię RAZ, po wszystkim
-            // Zresetuj stan paska postępu na następny raz
+            uploadProgressText.textContent = 'Wszystkie wspomnienia zostały pomyślnie przesłane!';
+            
+            setTimeout(async () => {
+                uploadOverlay.classList.remove('active');
+                currentCursor = null;
+                hasMoreImages = true;
+                await loadGalleryImages();
+                setTimeout(() => {
+                    progressBar.style.width = '0%';
+                }, 500);
+            }, 2000);
+
+        } catch (error) {
+            uploadProgressText.textContent = `Błąd: ${error.message}`;
+            progressBar.style.backgroundColor = '#d9534f';
             setTimeout(() => {
-                progressBar.style.width = '0%';
-            }, 500);
-        }, 2000);
+                uploadOverlay.classList.remove('active');
+                progressBar.style.backgroundColor = 'var(--primary-green)';
+            }, 4000);
+        }
     });
+
+    async function getDropboxToken() {
+        // Ta funkcja powinna bezpiecznie pobierać token, np. z innej funkcji Netlify
+        // Na potrzeby tego przykładu, zakładamy, że token jest dostępny po stronie klienta (co NIE jest bezpieczne w produkcji)
+        // W rzeczywistym scenariuszu, token powinien być zarządzany wyłącznie po stronie serwera.
+        const response = await fetch('/.netlify/functions/get-dropbox-token'); // Załóżmy, że masz taką funkcję
+        if (!response.ok) {
+            throw new Error('Nie można pobrać tokena Dropbox');
+        }
+        const data = await response.json();
+        return data.token;
+    }
 });

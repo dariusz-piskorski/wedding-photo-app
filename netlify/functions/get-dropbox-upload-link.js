@@ -1,67 +1,38 @@
+const fetch = require('node-fetch');
+
 exports.handler = async function(event, context) {
     if (event.httpMethod !== 'POST') {
-        return {
-            statusCode: 405,
-            body: JSON.stringify({ message: 'Method Not Allowed' }),
-            headers: {
-                'Allow': 'POST',
-            },
-        };
+        return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
-    const DROPBOX_TOKEN = process.env.DROPBOX_API_TOKEN; // Pobierz token z zmiennych środowiskowych Netlify
-    console.log('DROPBOX_API_TOKEN (masked):', DROPBOX_TOKEN ? DROPBOX_TOKEN.substring(0, 5) + '...' : 'Not set');
-
-    if (!DROPBOX_TOKEN) {
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ message: 'Błąd konfiguracji: Brak tokenu Dropbox API.' }),
-        };
-    }
+    const dropboxToken = process.env.DROPBOX_TOKEN;
 
     try {
-        const { filename } = JSON.parse(event.body);
-
-        const dropboxApiUrl = 'https://api.dropboxapi.com/2/files/get_temporary_upload_link';
-
-        const dropboxRequestPayload = {
-            commit_info: {
-                path: '/slubne-wspomnienia-gallery/' + filename,
-                mode: 'add',
-                autorename: true,
-                mute: false
-            },
-            duration: 3600 // Link ważny przez 1 godzinę
-        };
-
-        const response = await fetch(dropboxApiUrl, {
+        const response = await fetch('https://content.dropboxapi.com/2/files/upload_session/start', {
             method: 'POST',
             headers: {
-                'Authorization': 'Bearer ' + DROPBOX_TOKEN,
-                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${dropboxToken}`,
+                'Content-Type': 'application/octet-stream',
+                'Dropbox-API-Arg': JSON.stringify({
+                    close: false
+                })
             },
-            body: JSON.stringify(dropboxRequestPayload),
+            body: '' // Start the session without any data
         });
 
-        const responseData = await response.json();
-
         if (!response.ok) {
-            return {
-                statusCode: response.status,
-                body: JSON.stringify({ message: responseData.error_summary || 'Błąd Dropbox API' }),
-            };
+            const errorBody = await response.text();
+            console.error('Dropbox API Error:', errorBody);
+            return { statusCode: response.status, body: `Dropbox API Error: ${errorBody}` };
         }
 
+        const data = await response.json();
         return {
             statusCode: 200,
-            body: JSON.stringify({ uploadUrl: responseData.link }),
+            body: JSON.stringify({ session_id: data.session_id })
         };
-
     } catch (error) {
-        console.error('Błąd funkcji Netlify:', error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ message: 'Wystąpił błąd serwera.', error: error.message }),
-        };
+        console.error('Server Error:', error);
+        return { statusCode: 500, body: `Server Error: ${error.message}` };
     }
 };
