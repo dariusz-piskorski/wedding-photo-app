@@ -12,15 +12,19 @@ exports.handler = async function(event, context) {
     }
 
     const tokenUrl = 'https://api.dropbox.com/oauth2/token';
+    const basicAuth = Buffer.from(`${DROPBOX_APP_KEY}:${DROPBOX_APP_SECRET}`).toString('base64');
+
     const params = new URLSearchParams();
     params.append('grant_type', 'refresh_token');
     params.append('refresh_token', DROPBOX_REFRESH_TOKEN);
-    params.append('client_id', DROPBOX_APP_KEY);
-    params.append('client_secret', DROPBOX_APP_SECRET);
 
     try {
         const response = await fetch(tokenUrl, {
             method: 'POST',
+            headers: {
+                'Authorization': `Basic ${basicAuth}`,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
             body: params
         });
 
