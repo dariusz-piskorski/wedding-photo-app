@@ -1,82 +1,41 @@
-
 const fetch = require('node-fetch');
 
-// Funkcja do uzyskiwania nowego tokenu dostępowego (bez zmian)
-async function getAccessToken() {
-    const refreshToken = process.env.DROPBOX_REFRESH_TOKEN;
-    const appKey = process.env.DROPBOX_APP_KEY;
-    const appSecret = process.env.DROPBOX_APP_SECRET;
-    if (!refreshToken || !appKey || !appSecret) throw new Error('Brak konfiguracji Dropbox.');
-    const tokenUrl = 'https://api.dropboxapi.com/oauth2/token';
-    const params = new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken });
-    const basicAuth = Buffer.from(`${appKey}:${appSecret}`).toString('base64');
-    const response = await fetch(tokenUrl, {
-        method: 'POST',
-        headers: { 'Authorization': `Basic ${basicAuth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: params,
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(`Błąd odświeżania tokenu Dropbox: ${data.error_description || 'Nieznany błąd'}`);
-    return data.access_token;
-}
+exports.handler = async (event, context) => {
+    const { page = 1, limit = 10 } = event.queryStringParameters;
+    const accessToken = process.env.DROPBOX_ACCESS_TOKEN;
 
-// Główna funkcja handler
-exports.handler = async function(event, context) {
     try {
-        const accessToken = await getAccessToken();
-        const { page = 1, limit = 10 } = event.queryStringParameters; // Używamy paginacji zamiast kursora
-        const pageNum = parseInt(page);
-        const limitNum = parseInt(limit);
+        const response = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ path: '/slubne-wspomnienia-gallery' }),
+        });
 
-        let allFiles = [];
-        let cursor = null;
-        let has_more = true;
-
-        // 1. Pobierz WSZYSTKIE pliki z folderu, obsługując paginację Dropboxa
-        while (has_more) {
-            const apiEndpoint = cursor
-                ? 'https://api.dropboxapi.com/2/files/list_folder/continue'
-                : 'https://api.dropboxapi.com/2/files/list_folder';
-            const apiPayload = cursor
-                ? { cursor: cursor }
-                : { path: '/slubne-wspomnienia-gallery/', recursive: false, include_media_info: false };
-
-            const response = await fetch(apiEndpoint, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(apiPayload),
-            });
-
-            const data = await response.json();
-            if (!response.ok) throw new Error(`Błąd API Dropbox: ${data.error_summary || 'Nieznany błąd'}`);
-
-            const imageFiles = data.entries.filter(entry =>
-                entry['.tag'] === 'file' && /\.(jpe?g|png|gif|bmp|webp)$/i.test(entry.name)
-            );
-            allFiles.push(...imageFiles);
-
-            cursor = data.cursor;
-            has_more = data.has_more;
+        if (!response.ok) {
+            throw new Error(`Dropbox API error: ${response.statusText}`);
         }
 
-        // 2. Posortuj wszystkie pliki malejąco (od najnowszych do najstarszych)
-        // Zakładamy, że nazwa pliku zaczyna się od znacznika czasu YYYYMMDD_HHMMSS
-        allFiles.sort((a, b) => b.name.localeCompare(a.name));
+        const data = await response.json();
+        const files = data.entries.filter(entry => entry['.tag'] === 'file');
+        const sortedFiles = files.sort((a, b) => new Date(b.server_modified) - new Date(a.server_modified));
 
-        // 3. Oblicz paginację
-        const startIndex = (pageNum - 1) * limitNum;
-        const endIndex = pageNum * limitNum;
-        const paginatedFiles = allFiles.slice(startIndex, endIndex);
-        const hasMorePages = endIndex < allFiles.length;
+        const startIndex = (page - 1) * limit;
+        const endIndex = page * limit;
+        const paginatedFiles = sortedFiles.slice(startIndex, endIndex);
 
-        // 4. Wygeneruj linki tymczasowe tylko dla potrzebnej partii
         const imagePromises = paginatedFiles.map(async (file) => {
-            const getTemporaryLinkUrl = 'https://api.dropboxapi.com/2/files/get_temporary_link';
-            const linkResponse = await fetch(getTemporaryLinkUrl, {
+            const linkResponse = await fetch('https://api.dropboxapi.com/2/files/get_temporary_link', {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
                 body: JSON.stringify({ path: file.path_lower }),
             });
+
             if (linkResponse.ok) {
                 const linkData = await linkResponse.json();
                 return { name: file.name, url: linkData.link };
@@ -86,21 +45,14 @@ exports.handler = async function(event, context) {
 
         const images = (await Promise.all(imagePromises)).filter(img => img !== null);
 
-        // 5. Zwróć odpowiedź
         return {
             statusCode: 200,
-            body: JSON.stringify({
-                images: images,
-                has_more: hasMorePages, // Informuje klienta, czy są kolejne strony
-                next_page: hasMorePages ? pageNum + 1 : null
-            }),
+            body: JSON.stringify({ images, has_more: endIndex < sortedFiles.length }),
         };
-
     } catch (error) {
-        console.error('FUNCTION ERROR:', error);
         return {
             statusCode: 500,
-            body: JSON.stringify({ message: error.message || 'Wystąpił krytyczny błąd serwera.' }),
+            body: JSON.stringify({ message: error.message }),
         };
     }
 };
