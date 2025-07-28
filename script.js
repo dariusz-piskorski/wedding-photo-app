@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
                               now.getSeconds().toString().padStart(2, '0');
             const newFilename = `${timestamp}_${file.name}`;
 
-            uploadProgressText.textContent = `Przesyłanie pliku ${i + 1} z ${totalFiles}: ${file.name}`;
+            uploadProgressText.textContent = `Przesyłanie wspomnień ${i + 1} z ${totalFiles}: ${file.name}`;
 
             try {
                 // Krok 1: Uzyskaj link do wysyłki
@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 progressBar.style.width = `${progress}%`;
 
             } catch (error) {
-                uploadProgressText.textContent = `Błąd przy pliku ${file.name}: ${error.message}`;
+                uploadProgressText.textContent = `Błąd przy wspomnieniu ${file.name}: ${error.message}`;
                 progressBar.style.backgroundColor = '#d9534f'; // Czerwony kolor dla błędu
                 // Poczekaj chwilę, aby użytkownik zobaczył błąd, a następnie zamknij okno
                 setTimeout(() => {
@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Zakończenie sukcesem
-        uploadProgressText.textContent = 'Wszystkie pliki zostały pomyślnie przesłane!';
+        uploadProgressText.textContent = 'Wszystkie wspomnienia zostały pomyślnie przesłane!';
         
         // Poczekaj chwilę, aby użytkownik zobaczył komunikat o sukcesie
         setTimeout(async () => {
