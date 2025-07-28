@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressBar = document.getElementById('progressBar');
 
     // Zmienne stanu dla nieskończonego przewijania
-    let currentOffset = 0; // Zmieniono z currentCursor na currentOffset
+    let currentCursor = null; // Zmieniono z currentOffset na currentCursor
     let hasMoreImages = true;
     let isLoadingImages = false;
     const imagesPerLoad = 20; // Liczba obrazów ładowanych jednorazowo
@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!append) {
             galleryGrid.innerHTML = ''; // Wyczyść galerię tylko przy pierwszym ładowaniu
-            currentOffset = 0; // Zresetuj offset
+            currentCursor = null; // Zresetuj kursor
             hasMoreImages = true; // Zresetuj flagę
         }
 
@@ -37,7 +37,9 @@ document.addEventListener('DOMContentLoaded', () => {
             let url = '/.netlify/functions/get-dropbox-images';
             const params = new URLSearchParams();
             params.append('limit', imagesPerLoad);
-            params.append('cursor', currentOffset); // Wysyłaj offset jako cursor
+            if (currentCursor) {
+                params.append('cursor', currentCursor);
+            }
             url += `?${params.toString()}`;
 
             const response = await fetch(url);
@@ -80,8 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 galleryGrid.appendChild(loadingIndicator);
             }
 
-            currentOffset += images.length; // Zwiększ offset o liczbę załadowanych obrazów
-            hasMoreImages = data.has_more; // Użyj has_more z odpowiedzi serwera
+            currentCursor = data.cursor; // Użyj kursora z odpowiedzi Dropboxa
+            hasMoreImages = data.has_more; // Użyj has_more z odpowiedzi Dropboxa
 
         } catch (error) {
             console.error('Błąd ładowania galerii:', error);
@@ -209,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(async () => {
             uploadOverlay.classList.remove('active');
             // Zresetuj stan paginacji przed odświeżeniem galerii
-            currentOffset = 0; // Zresetuj offset
+            currentCursor = null;
             hasMoreImages = true;
             await loadGalleryImages(); // Odśwież galerię RAZ, po wszystkim
             // Zresetuj stan paska postępu na następny raz

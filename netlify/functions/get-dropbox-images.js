@@ -16,71 +16,58 @@ exports.handler = async function(event, context) {
         const defaultLimit = 20; // Domyślna liczba obrazów do pobrania na żądanie
         const fetchLimit = parseInt(limit) || defaultLimit;
 
-        let apiEndpoint = 'https://api.dropboxapi.com/2/files/list_folder';
-        let apiPayload = {
-            path: '/slubne-wspomnienia-gallery/', // Ścieżka do folderu galerii
-            recursive: false,
-            include_media_info: true, // Potrzebne do sortowania po dacie
-            include_deleted: false,
-            include_has_explicit_shared_members: false,
-            include_mounted_folders: true,
-            include_non_downloadable_files: false
-        };
+        let apiEndpoint;
+        let apiPayload;
 
-        console.log('FUNCTION LOG: Sending initial list_folder request to Dropbox.');
-        let allFiles = [];
-        let hasMore = true;
-        let currentApiCursor = null;
-
-        // Pętla do pobierania wszystkich plików (bez limitu na raz)
-        while (hasMore) {
-            const listFilesResponse = await fetch(apiEndpoint, {
-                method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer ' + process.env.DROPBOX_API_TOKEN,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(apiPayload),
-            });
-
-            const listFilesData = await listFilesResponse.json();
-            if (!listFilesResponse.ok) {
-                const errorDetails = listFilesData.error_summary || listFilesData.error || 'Unknown Dropbox API error';
-                console.error('FUNCTION ERROR: list_folder failed. Status:', listFilesResponse.status, 'StatusText:', listFilesResponse.statusText, 'Details:', errorDetails);
-                return {
-                    statusCode: listFilesResponse.status,
-                    body: JSON.stringify({
-                        message: `Błąd Dropbox API: ${errorDetails} (Status: ${listFilesResponse.status}, ${listFilesResponse.statusText || 'Brak statusText'})`
-                    }),
-                };
-            }
-
-            allFiles = allFiles.concat(listFilesData.entries.filter(entry => 
-                entry['.tag'] === 'file' &&
-                /\.(jpe?g|png|gif|bmp|webp)$/i.test(entry.name)
-            ));
-
-            hasMore = listFilesData.has_more;
-            if (hasMore) {
-                apiEndpoint = 'https://api.dropboxapi.com/2/files/list_folder/continue';
-                apiPayload = { cursor: listFilesData.cursor };
-            }
+        if (cursor) {
+            apiEndpoint = 'https://api.dropboxapi.com/2/files/list_folder/continue';
+            apiPayload = {
+                cursor: cursor
+            };
+            console.log('FUNCTION LOG: Sending list_folder/continue request to Dropbox with cursor:', cursor);
+        } else {
+            apiEndpoint = 'https://api.dropboxapi.com/2/files/list_folder';
+            apiPayload = {
+                path: '/slubne-wspomnienia-gallery/', // Ścieżka do folderu galerii
+                recursive: false,
+                limit: fetchLimit, // Zastosuj limit dla początkowego wywołania
+                include_media_info: false, // Not needed for sorting here
+                include_deleted: false,
+                include_has_explicit_shared_members: false,
+                include_mounted_folders: true,
+                include_non_downloadable_files: false
+            };
+            console.log('FUNCTION LOG: Sending list_folder request to Dropbox with limit:', fetchLimit);
         }
 
-        console.log('FUNCTION LOG: Total image files found:', allFiles.length);
-
-        // Sortowanie plików od najnowszych do najstarszych
-        allFiles.sort((a, b) => {
-            const dateA = new Date(a.server_modified);
-            const dateB = new Date(b.server_modified);
-            return dateB - dateA; // Sortowanie malejące (najnowsze pierwsze)
+        const listFilesResponse = await fetch(apiEndpoint, {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + process.env.DROPBOX_API_TOKEN,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(apiPayload),
         });
 
-        // Implementacja paginacji po stronie serwera Netlify
-        const offset = parseInt(cursor) || 0; // cursor będzie teraz offsetem
-        const paginatedFiles = allFiles.slice(offset, offset + fetchLimit);
+        const listFilesData = await listFilesResponse.json();
+        if (!listFilesResponse.ok) {
+            const errorDetails = listFilesData.error_summary || listFilesData.error || 'Unknown Dropbox API error';
+            console.error('FUNCTION ERROR: list_folder failed. Status:', listFilesResponse.status, 'StatusText:', listFilesResponse.statusText, 'Details:', errorDetails);
+            return {
+                statusCode: listFilesResponse.status,
+                body: JSON.stringify({
+                    message: `Błąd Dropbox API: ${errorDetails} (Status: ${listFilesResponse.status}, ${listFilesResponse.statusText || 'Brak statusText'})`
+                }),
+            };
+        }
 
-        const imagePromises = paginatedFiles.map(async (file) => {
+        const files = listFilesData.entries.filter(entry =>
+            entry['.tag'] === 'file' &&
+            /\.(jpe?g|png|gif|bmp|webp)$/i.test(entry.name)
+        );
+        console.log('FUNCTION LOG: Found files:', files.length);
+
+        const imagePromises = files.map(async (file) => {
             const getTemporaryLinkUrl = 'https://api.dropboxapi.com/2/files/get_temporary_link';
             const getTemporaryLinkPayload = { path: file.path_lower };
 
@@ -114,7 +101,7 @@ exports.handler = async function(event, context) {
             statusCode: 200,
             body: JSON.stringify({
                 images: images,
-                cursor: listFilesData.cursor,
+                cursor: listFilesData.cursor, // Use Dropbox's cursor
                 has_more: listFilesData.has_more
             }),
         };
