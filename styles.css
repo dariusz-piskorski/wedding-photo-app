@@ -26,6 +26,37 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+.action-button {
+    background-color: var(--primary-green);
+    color: var(--white);
+    padding: 15px 30px;
+    border: none;
+    border-radius: 50px; /* Zaokrąglone rogi */
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    display: inline-flex; /* Użyj flexboxa dla wyrównania ikony i tekstu */
+    align-items: center;
+    justify-content: center;
+    margin-top: 20px; /* Dodaj margines, aby oddzielić od separatora */
+}
+
+.action-button i {
+    margin-right: 8px; /* Odstęp między ikoną a tekstem */
+}
+
+.action-button:hover {
+    background-color: #3A6C49; /* Ciemniejszy odcień zieleni */
+    transform: translateY(-2px);
+}
+
+.action-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
 /* Hero Section */
 .hero-section {
     width: 100%;
