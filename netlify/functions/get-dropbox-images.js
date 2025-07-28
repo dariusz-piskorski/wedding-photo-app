@@ -41,64 +41,60 @@ exports.handler = async function(event, context) {
         // 1. Zawsze uzyskuj świeży, krótkoterminowy token dostępowy
         const accessToken = await getAccessToken();
 
-        const { cursor, limit } = event.queryStringParameters;
-        const defaultLimit = 20;
-        const fetchLimit = parseInt(limit) || defaultLimit;
+        const { page = 1, limit = 10 } = event.queryStringParameters; // Używamy paginacji zamiast kursora
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
 
-        let apiEndpoint;
-        let apiPayload;
+        let allFiles = [];
+        let cursor = null;
+        let has_more_dropbox = true; // Zmienna do śledzenia paginacji Dropboxa
 
-        // 2. Użyj uzyskanego tokenu do komunikacji z API Dropbox
-        if (cursor) {
-            apiEndpoint = 'https://api.dropboxapi.com/2/files/list_folder/continue';
-            apiPayload = { cursor: cursor };
-        } else {
-            apiEndpoint = 'https://api.dropboxapi.com/2/files/list_folder';
-            apiPayload = {
-                path: '/slubne-wspomnienia-gallery/',
-                recursive: false,
-                limit: fetchLimit,
-                include_media_info: false,
-                include_deleted: false,
-            };
-        }
+        // 2. Pobierz WSZYSTKIE pliki z folderu, obsługując paginację Dropboxa
+        while (has_more_dropbox) {
+            const apiEndpoint = cursor
+                ? 'https://api.dropboxapi.com/2/files/list_folder/continue'
+                : 'https://api.dropboxapi.com/2/files/list_folder';
+            const apiPayload = cursor
+                ? { cursor: cursor }
+                : { path: '/slubne-wspomnienia-gallery/', recursive: false, include_media_info: false };
 
-        const listFilesResponse = await fetch(apiEndpoint, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(apiPayload),
-        });
-
-        const listFilesData = await listFilesResponse.json();
-        if (!listFilesResponse.ok) {
-            const errorDetails = listFilesData.error_summary || 'Unknown Dropbox API error';
-            console.error('Dropbox API Error:', listFilesData);
-            return {
-                statusCode: listFilesResponse.status,
-                body: JSON.stringify({ message: `Błąd Dropbox API: ${errorDetails}` }),
-            };
-        }
-
-        const files = listFilesData.entries.filter(entry =>
-            entry['.tag'] === 'file' && /\.(jpe?g|png|gif|bmp|webp)$/i.test(entry.name)
-        );
-
-        const imagePromises = files.map(async (file) => {
-            const getTemporaryLinkUrl = 'https://api.dropboxapi.com/2/files/get_temporary_link';
-            const getTemporaryLinkPayload = { path: file.path_lower };
-
-            const linkResponse = await fetch(getTemporaryLinkUrl, {
+            const response = await fetch(apiEndpoint, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(getTemporaryLinkPayload),
+                headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(apiPayload),
             });
 
+            const data = await response.json();
+            if (!response.ok) throw new Error(`Błąd API Dropbox: ${data.error_summary || 'Nieznany błąd'}`);
+
+            const imageFiles = data.entries.filter(entry =>
+                entry['.tag'] === 'file' && /\.(jpe?g|png|gif|bmp|webp)$/i.test(entry.name)
+            );
+            allFiles.push(...imageFiles);
+
+            cursor = data.cursor;
+            has_more_dropbox = data.has_more;
+        }
+
+        // 3. Posortuj wszystkie pliki malejąco (od najnowszych do najstarszych)
+        // Zakładamy, że nazwa pliku zaczyna się od znacznika czasu YYYYMMDD_HHMMSS
+        // Jeśli nazwa pliku nie zawiera daty, można użyć file.server_modified
+        allFiles.sort((a, b) => b.name.localeCompare(a.name));
+
+        // 4. Oblicz paginację dla klienta
+        const startIndex = (pageNum - 1) * limitNum;
+        const endIndex = pageNum * limitNum;
+        const paginatedFiles = allFiles.slice(startIndex, endIndex);
+        const hasMorePages = endIndex < allFiles.length;
+
+        // 5. Wygeneruj linki tymczasowe tylko dla potrzebnej partii
+        const imagePromises = paginatedFiles.map(async (file) => {
+            const getTemporaryLinkUrl = 'https://api.dropboxapi.com/2/files/get_temporary_link';
+            const linkResponse = await fetch(getTemporaryLinkUrl, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: file.path_lower }),
+            });
             if (linkResponse.ok) {
                 const linkData = await linkResponse.json();
                 return { name: file.name, url: linkData.link };
@@ -109,12 +105,13 @@ exports.handler = async function(event, context) {
 
         const images = (await Promise.all(imagePromises)).filter(img => img !== null);
 
+        // 6. Zwróć odpowiedź
         return {
             statusCode: 200,
             body: JSON.stringify({
                 images: images,
-                cursor: listFilesData.cursor,
-                has_more: listFilesData.has_more
+                has_more: hasMorePages, // Informuje klienta, czy są kolejne strony
+                next_page: hasMorePages ? pageNum + 1 : null
             }),
         };
 
