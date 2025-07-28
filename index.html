@@ -15,19 +15,14 @@
     </header>
 
     <main class="content-section">
-        <div class="upload-area">
-            <input type="file" id="fileInput" multiple accept="image/*,video/*" style="display: none;">
-            <button id="uploadButton" class="action-button"><i class="fas fa-plus-circle"></i> Dodaj wspomnienia</button>
-            <div id="status" class="status-message"></div>
-        </div>
-
         <section class="gallery-section">
             <h2 class="gallery-heading">Galeria Wspomnień</h2>
+            <div class="title-separator"></div>
+            <input type="file" id="fileInput" multiple accept="image/*,video/*" style="display: none;">
+            <button id="uploadButton" class="action-button"><i class="fas fa-plus-circle"></i> Dodaj wspomnienia</button>
+            <div id="status" class="status-message" style="margin-bottom: 25px;"></div>
             <div class="gallery-grid">
                 <!-- Tutaj będą ładowane zdjęcia -->
-                <div class="gallery-placeholder"></div>
-                <div class="gallery-placeholder"></div>
-                <div class="gallery-placeholder"></div>
             </div>
         </section>
     </main>
