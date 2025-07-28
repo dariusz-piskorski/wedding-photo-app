@@ -77,6 +77,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 galleryGrid.appendChild(imgContainer);
             });
 
+            // Upewnij się, że loadingIndicator jest ostatnim elementem w galleryGrid
+            if (loadingIndicator.parentNode !== galleryGrid) {
+                galleryGrid.appendChild(loadingIndicator);
+            }
+
             currentCursor = data.cursor;
             hasMoreImages = data.has_more;
 
@@ -87,7 +92,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } finally {
             isLoadingImages = false;
-            loadingIndicator.style.display = 'none'; // Ukryj wskaźnik ładowania
+            // Pokaż wskaźnik ładowania tylko jeśli są jeszcze obrazy do załadowania
+            if (hasMoreImages) {
+                loadingIndicator.style.display = 'block';
+            } else {
+                loadingIndicator.style.display = 'none';
+            }
         }
     }
 
