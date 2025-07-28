@@ -5,13 +5,19 @@ exports.handler = async function(event, context) {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
-    const dropboxToken = process.env.DROPBOX_TOKEN;
+    const { authorization } = event.headers;
+
+    if (!authorization) {
+        return { statusCode: 401, body: 'Unauthorized' };
+    }
+
+    const token = authorization.split(' ')[1];
 
     try {
         const response = await fetch('https://content.dropboxapi.com/2/files/upload_session/start', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${dropboxToken}`,
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/octet-stream',
                 'Dropbox-API-Arg': JSON.stringify({
                     close: false

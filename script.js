@@ -202,6 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const token = await getDropboxToken();
+            console.log('FRONTEND LOG: Token received from getDropboxToken:', token);
 
             for (let i = 0; i < totalFiles; i++) {
                 const file = files[i];

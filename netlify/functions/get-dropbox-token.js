@@ -26,17 +26,18 @@ exports.handler = async function(event, context) {
 
         if (!response.ok) {
             const errorBody = await response.text();
-            console.error('Dropbox API Error:', errorBody);
+            console.error('Dropbox API Error (get-dropbox-token):', errorBody);
             return { statusCode: response.status, body: `Dropbox API Error: ${errorBody}` };
         }
 
         const data = await response.json();
+        console.log('Generated access token:', data.access_token); // Add this log
         return {
             statusCode: 200,
             body: JSON.stringify({ token: data.access_token })
         };
     } catch (error) {
-        console.error('Server Error:', error);
+        console.error('Server Error (get-dropbox-token):', error);
         return { statusCode: 500, body: `Server Error: ${error.message}` };
     }
 };
