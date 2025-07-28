@@ -111,7 +111,10 @@ exports.handler = async function(event, context) {
             // Get temporary link for thumbnail
             const getThumbnailUrl = 'https://content.dropboxapi.com/2/files/get_thumbnail_v2';
             const getThumbnailArg = {
-                path: file.path_lower,
+                resource: {
+                    ".tag": "path",
+                    path: file.path_lower
+                },
                 format: 'jpeg',
                 size: 'w640h480',
                 mode: 'strict'
@@ -121,18 +124,18 @@ exports.handler = async function(event, context) {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'application/octet-stream',
-                    'Dropbox-API-Arg': JSON.stringify(getThumbnailArg),
+                    'Content-Type': 'application/json',
                 },
-                body: '',
+                body: JSON.stringify(getThumbnailArg),
             });
 
             let thumbnailUrl = null;
             if (thumbnailResponse.ok) {
-                const thumbnailData = await thumbnailResponse.json();
-                thumbnailUrl = thumbnailData.link;
+                const thumbnailBuffer = await thumbnailResponse.arrayBuffer();
+                const base64Thumbnail = Buffer.from(thumbnailBuffer).toString('base64');
+                thumbnailUrl = `data:image/jpeg;base64,${base64Thumbnail}`;
             } else {
-                console.error(`Failed to get temp link for thumbnail ${file.name}:`, await thumbnailResponse.text());
+                console.error(`Failed to get thumbnail for ${file.name}:`, await thumbnailResponse.text());
             }
 
             if (fullImageUrl && thumbnailUrl) {
