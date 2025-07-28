@@ -190,6 +190,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Poczekaj chwilę, aby użytkownik zobaczył komunikat o sukcesie
         setTimeout(async () => {
             uploadOverlay.classList.remove('active');
+            // Zresetuj stan paginacji przed odświeżeniem galerii
+            currentCursor = null;
+            hasMoreImages = true;
             await loadGalleryImages(); // Odśwież galerię RAZ, po wszystkim
             // Zresetuj stan paska postępu na następny raz
             setTimeout(() => {
