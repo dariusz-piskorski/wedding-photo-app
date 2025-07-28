@@ -85,10 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 galleryGrid.appendChild(imgContainer);
             });
 
-            // Upewnij się, że loadingIndicator jest ostatnim elementem w galleryGrid
-            if (loadingIndicator.parentNode !== galleryGrid) {
-                galleryGrid.appendChild(loadingIndicator);
-            }
+            
 
             currentCursor = data.cursor; // Użyj kursora z odpowiedzi Dropboxa
             hasMoreImages = data.has_more; // Użyj has_more z odpowiedzi Dropboxa
