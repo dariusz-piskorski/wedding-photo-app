@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 imgContainer.classList.add('gallery-item');
 
                 const img = document.createElement('img');
-                img.src = image.thumbnailUrl; // Użyj URL miniatury
+                img.src = image.url; // Użyj bezpośredniego URL do obrazu
                 img.alt = image.name;
                 img.loading = 'lazy'; // Lazy loading
 
@@ -113,8 +113,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentImageIndex = index; // <--- TA LINIA ZOSTAŁA DODANA
 
         const image = allGalleryImages[index];
-        lightboxImage.src = image.fullImageUrl;
-        downloadButton.href = image.fullImageUrl;
+        lightboxImage.src = image.url;
+        downloadButton.href = image.url;
         downloadButton.download = image.name;
         lightbox.classList.add('active');
 
